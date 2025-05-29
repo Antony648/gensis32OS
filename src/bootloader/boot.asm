@@ -38,29 +38,27 @@ nop
 ;DL = Drive number (0 for first floppy, 1 for second)
 ;ES:BX = Buffer address → Where data should be stored
 
-;expects 
+;expects sector number in cl and buffer location to be in bx
 read_sector:
-	push	ax	
-	push	dx
-
-	mov		ah,0x02
-	mov		al,1
-	mov 	dl,[drive_no]
 	pusha
-	INT		0x13
-	popa
+	mov		ah,0x02
+	mov		al,1			;no ofsector tobe read	
+	mov 		dl,[drive_no]		
+	mov 		dh,0x0			;head
+	mov		ch,0x0 			;cylinder
 
-	pop		dx
-	pop 	ax
+	INT		0x13
+	jc		.error_handling
+	popa
+.error_handling:
 	ret
 
-setup_:
+;setup_:
 ;set all register in condition expected by the system
 ;jmp control to region in ram that stores the buffer of kernel.bin
 ;so that cpu exectues it
-	xor ax,ax
-	ret
-kern:	db		"KERNEL   BIN"
+;	ret
+;kern:	db		"KERNEL   BIN"
 start_boot:
 ;reseverd sector number =1
 ;fat region=no_fat*sect_per_fat
@@ -69,26 +67,24 @@ start_boot:
 ;and compare the name with "KERNEL  BIN" bad practice but we will fix later
 ;then copy sectors from kenel.bin file to buffer in ram
 ;call setup_
-
-;region for calculation of byte number associated with the root sector
-;	mov 	cx,[fat_no]		;number of fat tables
-;	mul	cx,[sect_per_fat]	;contains the fat region in sectors-1 because we forgot to add the boot sector
-;	add	cx,1			;contains the fat region in sectors
-;	mul	cx,[bytes_per_sect]	;contains the byte address
-;
-
+	mov	cl,[no_res_sect]
+	mov	al,[fat_no]
+	mov 	bl,[sect_per_fat]
+	mul	bl
+	add	cl,al
+	;calculate the total number of sectors in root dir
+	mov	ax,[root_dir_entries]
+	mov	bx,28
+	mul	bx
+	mov	bx,512
+	div	bx	;at this point number ofsectors in root dir is at ax
 .loop:
-	
-	;code for 11byte string comparision
-	lea 	si,[kern]	;now si contains the value of "KERNEL   BIN"
-;	lea	di,[cmp_str]
-	mov 	cx,11		;number of bytes to be compared stored in cx
-
-	cld			;clear direction flag
-	repe 	cmpsb		;compare all bytes
-	jz 	.match
-
-.match:
+	mov	bx,0x0500
+	call	read_sector
+	;compare from here
+	inc	cl
+	cmp	cl,al
+	jle	.loop
 	ret
 
 
@@ -98,22 +94,27 @@ start_boot:
 print:
 	push  	ax	;ax=ah,al
 	push	bx
-push 	si
+	push 	si
 	mov		al,[si]
 .loop:
-	test 	al,al
+	test 		al,al
 	jz		.end
 	mov		ah,0x0e
-	mov 	bh,0x00
+	mov 		bh,0x00
 	INT		0x10
 	lodsb
 	jmp		.loop
-	.end:
+.end:
 	pop		si
-	pop 	bx
+	pop 		bx
 	pop		ax
 	ret
 msg:	db 'success',0
+msg1:	db  'fail',0
+;error_handling:
+;	mov	si,msg1
+;	call	print
+;	ret
 main:
 	;set all segment registers to 0
 	;we cannot direcly push 
