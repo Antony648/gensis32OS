@@ -38,7 +38,7 @@ nop
 ;DH = Head number (0-1 for a floppy disk)
 ;DL = Drive number (0 for first floppy, 1 for second)
 ;ES:BX = Buffer address → Where data should be stored
-error:  db    "err",0
+error:  db    "errdddd",0
 ;expects sector number in cl and buffer location to be in bx
 read_sector:
 	pusha
@@ -47,7 +47,8 @@ read_sector:
 	mov 	dl,[drive_no]		
 	mov 	dh,0x0			;head
 	mov		ch,0x0 			;cylinder
-
+.hlt_d:
+  jmp   .hlt_d
 	INT		0x13
 	jc		.error_handling
 	popa
