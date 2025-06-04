@@ -142,7 +142,7 @@ start_boot:
   lea   dx,[di]
   repe  cmpsb                   ;compare 11 bytes of starting dx and kern
   je    found                  ;if matchfound jump .found
-  add   dx,32                   ;else increment 28 bytes(name of next directory entry)
+  add   di,32                   ;else increment 28 bytes(name of next directory entry)
   ;code to decrement the count of dx and check if target value hit 0 to break out
   dec   bx
   test  bx,bx
@@ -177,13 +177,14 @@ print:
 	pop		ax
 	ret
 msg:	db 'success',0
+msg1: db 'kernel found',0
 ;msg1:	db  'fail',0
 ;error_handling:
 ;	mov	si,msg1
 ;	call	print
 ;	ret
 found:
-  mov   si,msg
+  mov   si,msg1
   call  print
 .hlt:
   jmp .hlt
