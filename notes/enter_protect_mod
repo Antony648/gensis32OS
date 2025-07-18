@@ -1,0 +1,184 @@
+ GLOBAL DESCRIPTOR TABLE(GDT):
+ 	it is table that contains a number of entries called descriptors, a gdt should atleast have one descriptor called NULL DESCRIPTOR,
+PURPOSE:- it is used to specify what region of virtual memory can be used for  what all activies,
+	consider a descriptor, called KERNEL CODE, it specified range of addresses where KERNEL CODE can reside in virtual memory,each gdt description(entry ) is of 8bytes(64 bits), they specify different attributes regarding that specified region, like the ring level,base(starting address), limit(offset or end), flags etc,
+so each descriptor sets a set of properties and privilege levels for certian regions of memory, a general gdt contains about five to six descriptors,generally they are:-
+	i)NULL (mandatory) 
+	ii)KERNEL CODE
+	iii)KERNEL DATA
+	iv)USER CODE
+	v) USER DATA
+so all selectors point to one of the descriptions of global descriptor table, 
+LOCAL DESCRIPTOR TABLE:-
+	this is an alternative for GDT, it can be seen as a customised form of GDT but only for specific user space processes, it also has enttries that describe what segments of program lies within what range, it is not a subdivision of GDT, but rather  works as independent alternative to  GDT, but it is safe practice to see to that the code segment pointing address in LDT, is within the USER CODE region and data segment in LDT, lies within USER DATA region, it is not a mandatory rule, but rather a genral practice, to avoid genral protection fault, because consider a situvation where LDT  entries for code region(entry pointed by code segment register), is associated with a range of memory decclared by GDT as KERNEL CODE, as these two regions have a very differnet privilege level this will result in user process trying to execute at kernel space, thereby causing general protection fault.
+
+GLOBAL DESCRIPTOR TABLE ENTRIES:
+		the structure of GDT does not matter much as we are going to implement memory mapping,(it is still relevant, but not as releveant as it would be if we did not implement paging), we will be entering some default values, for smooth working, but the structure GDT entry is as follows:-
+
+BYTES	bits	 fieldname	 description
+0-1	0-15	  limit	          lower 16 bits of segment limit(15:0)
+2-3	16-39	  base address    lower 16 bits of base address(15:0)
+4	40-47     base address 	  middle 8 bits of base address(16:23)
+5	48-55	  access byte	  segment type, privilege level,accessbytes
+6	56-59     limit		  upper 4 bits of segment limit(16:20)
+6 	60-63	  flags		  granularity, operand size
+7 	64-71     base address	  highest 8 bits of base address(24:31)
+
+field explanations:
+	segment limit(20 bit):
+it tells how big a segment is 
+if granularity in flag field is set to 0,then max size=1MiB
+if granularity in flag field is set to 1,then max size =4GiB
+
+	base address(32bit):
+it is the starting address of segment, so as we are creating a 32 bit protected mode os, every address is 32 bits in size, 
+
+
+	access byte:
+BIT 		meaning
+7		present bit (valid=1)
+6-5		Descriptor Privilege Level(0=kernel,3=user)
+4		descriptor type (1=code/data,0=system)
+3-0		segment type and access permissions
+
+	flags:
+BIT 	FLAG		meaning
+7	G(granularity)  0=byte, 1=4KiB units
+6	default size	0=16 bit,1=32 bits
+5	L(length)	1=64 bit
+4	reserved
+ 
+granularity says about how segment limit will be calculated,
+if granularity G=0, a limit of 0x000fffff =~ 1MiB
+if granularity G=1,for the same value instead of multiplying to 1 ,we multiply to 4KiB, a limit of 0x00fffff =~ 4GiB,(0x00ffff*4KiB)
+ENTER PROTECTED MODE(practical and code explanaition)
+
+<nasm snippet begin>
+move_protect:
+	cli
+	lgdt 	[gdt_descriptor]
+	mov 	eax,cr0
+	or 	eax,0x01
+	mov 	cr0,eax
+	jmp	0x8:protected_mode
+gdt_null:
+	dd	0x00000000
+	dd 	0x00000000
+gdt_kernel_code:
+	dw	0xffff
+	dw	0x0000
+	db	0x00
+	db	0x9a	;db 10001010b
+	db 	0xcf	;db 11001111b
+	db	0x00
+gdt_kernel_data:
+	dw 	0xffff
+	dw 	0x0000
+	db 	0x00
+	db 	0x92	;db 10000010b
+	db	0xcf	;db 11001111b
+	db 	0x00
+gdb_end:
+gdb_descriptor:
+	dw 	gdb_descriptor-gdt_null-1
+	dd	gdt_null
+[bits 32]
+protected_mode:
+	mov 	ax,0x10
+	mov	ss,ax
+	mov 	ds,ax
+	mov	es,ax
+	mov	gs,ax
+	mov 	fs,ax
+	mov 	ebp, 0x00200000
+	mov	esp,ebp
+	jmp	$
+<nasm snippet end>
+EXPLANATION
+<----------------------------------------------->
+EXPLANAION OF GLOBAL DESCRIPTOR TABLE
+	
+gdt_null:
+	dd	0x00000000
+	dd 	0x00000000
+
+this is the first entry into out gdt, it is the null descriptor, it is mandatory to have one, as null descriptor is fully zeros, we set 64bits bt giving two directivies of dword size (32bits*2) of zeros
+
+
+
+gdt_kernel_code:
+	dw	0xffff
+	dw	0x0000
+	db	0x00
+	db	0x9a	;db 10001010b
+	db 	0xcf	;db 11001111b
+	db	0x00
+
+this is for kernelcode this is where we expect our cs selector in protected mode to point at  we aim to have the following values:-
+	base: 0x0000 00000
+	offset:0xf ffff
+	accessbyte:0x9a (10001010)
+	flag: 0xc	(1100)
+explanation of accessbyte:0x9a
+	bit7:present bit ;1
+	bit6-5:descriptor bit:00 (value zero for kernel level)
+	bit4:descriptor type: 0 (for code,data segments)
+	(these four constitue as 0x9)
+	bit3: executable:1(1 for executable data segment)
+	bit2:direction_count:0 (codes that can only be executed) 
+	bit1: readable/writable:1(code segements that can be read)
+	bit0: accessbit:0(read only)
+  so using access byte we say that kernel code is a kernel level,code/data segment, that can be executed,that can be read but cannot be written to (read only)
+explanation of flag:
+	flag has only 4bits  associated to it
+	bit3:granularity:1
+	bit2:protected_mode:1 
+	bit1:long:0(code/data)
+	bit0: reseverd:0
+
+gdt_kernel_data:
+	dw 	0xffff
+	dw 	0x0000
+	db 	0x00
+	db 	0x92	;db 10000010b
+	db	0xcf	;db 11001111b
+	db 	0x00
+
+kerneldata is intended for ds,ss,gs,fs,es selectors , it has exacltly same attributes of kernelcode except for executable bit of accessbyte is set to 0. as is it code and not intended for execution.
+gdb_end:
+
+<----------------------------------------------->
+	her we have our first set of commands starting form label "move_protect:" till  'gdb_null' they are for jumping form 16 bit real mode to 32 bit protected mode,
+I)cli:
+ cli clears all interrupts(cli command prevents cpu from  acknowlegding all hardware interupts by setting interupt flag as 0), this is real mode interrupt vector table(IVT)(where bios stores the location of code associated to all interrupts),is at location 0x0000:0x0000, but while jumping to protected mode,cpu expects IDT(interupt descriptor table),which has different format,as we have not created that yet,we have to make sure that cpu does not acknowledge any hardware interrupts, if it acknowledges it, then while we are at protected mode and some hardware interrupt occurs, then it will raise a general proteciton fault,as it GP has no handler, it results in Double protection fault,and as DP has no handler, Triple protection fault occurs and system reboots.
+SO IT IS VERY CRITICAL TO SET IF =0,BY USING cli INSTRUCTION
+
+II)lgdt [lgdt_descriptor]:
+	this instruction loads GLOBAL DESCRIPTOR TABLE to a special register called GDTR, the lgdt_descriptor that we pass is not the actual gdt entry but a 6byte structure that holds the size of gdt table and starting address of gdt_table, 
+GDT_DESCRIPTOR:
+	word_size(2bytes) 	size 
+	dword_size(4bytes)	starting_address
+the address of this structure is to be passed to lgdt insruction.
+loading gdt is very essential as it is neccessary for segment registers that gets converted selectors after going to protected mode.
+
+III)
+mov 	eax,cr0
+or 	eax,0x1
+mov	cr0,eax
+
+the above three instruction basically take cr0 register and make the last bit to 1, because the last bit of cr0 register is the PE BIT, Protection Enable bit.
+
+
+IV)
+jmp 	0x8:protected_mode
+this instruction basically sets cs to value 0x08, if we were in real mode this would have cause an error and we would land on an instruction that is 8 instrucions ahead of actual instruction, but as we set PE to 1, we are in protected mode, cs is a selector, 0x8 points to second entry in FGDT, that is to our kernel code, so its base address is 0x0000 0000 which if added to label protected mode, aligns perfectly, so this long jumps our program contorl into the protected mode,
+
+V)[bits 32]
+	it is a context-switching-directive that is neccessary for assembler to understand that we are going to write 32 bit code from here on and  should be placed immediately before protected mode label.
+
+VI)protected_mode : (and its contents) 
+	here we assign all selectors ss,gs,fs,es,ds to 0x10 (second entry in GDT table so they all point to kernel data. we make esp and ebp to 0x0020000 , somewhere far into to the memory as we are in protected 32 bit mode and have a lot of space to play with (4GiB),
+
+VII) jmp  $
+	infinte jump.
+	
