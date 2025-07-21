@@ -1,1 +1,96 @@
 cross compiler is neccessary for compiling programs to other architecutre not native to the system used to develop
+
+all linux systems by default contains gcc and binutils, these toolchains are native to the corresponding linux system version, so all the c programs that we write in that system and compile it using gcc in that system will get compiled so as to  get executables to run in the current system,
+ 
+but as we want to develop operating system to run in 32 bit protected mode, we want our programs written in c to get converted into executables that could be run in 32bit in protected for intel i686 processor
+ 
+binutils contains :-
+
+ld	linker for linking object files so as to become executables
+as	assembler to convert assemblyfiles to object code
+nm	list symbols from object files
+objcopy	copies and translates object files
+objdump	display info about object files
+readelf	info about elf files
+
+there are much more.....
+
+so we have to create our own toolchains that can take a c program and create executable for out targert architecture(i386).
+
+ALL THE COMMANDS BELOW ARE TAKEN FROM OSDEV, link: https://wiki.osdev.org/GCC_Cross-Compiler
+commands used and explanation:-
+	export PREFIX="$HOME/opt/cross"
+	export TARGET=i686-elf
+	export PATH="$PREFIX/bin:$PATH"
+
+we create  these environment variables,so that we can use in later commands
+in this os project i will be using gcc.10.2.0 and binutils 2.35,install these from gcc mirror and binutils website you can get as archived files
+unzip them in the src folder in home.
+(if you downloaded "binutils-2.35.tar.xz" then run command "tar -xJvf ~/Downloads/binutils-2.35.tar.xz" in  src,assuming that you have "~/Downloads/binutils-2.35.tar.xz")
+generating binutils:
+	mkdir $HOME/src (if your home directory does not contain src, because this is where we will be unzipping tar)
+	cd $HOME/src 	(now you must be in home/src directory and i assume at this point you have unzipped gcc and binutils in this directory)
+	mkdir build-binutils (create a  folder called build-binutils this is where we will create binutils toolchain based on target system)
+	cd build-binutils
+	../binutils-2.35/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot  --disable-nls --disable-werror
+	make
+	make install
+
+	the command 
+	../binutils-2.35/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot  --disable-nls --disable-werror
+
+	has the following meaning, we are configuring options so that when we make the binutils later we wil get what we actully want
+	--target=$TARGET , we set TARGET=i686-elf so that the excutable produced so the command is equivalent to
+	--target=i686-elf 
+
+	--prefix="$PREFIX" ,sets the installation directory for the compiled tools  after make install command is run
+	--prefix="$HOME/opt/cross"  , so all your binutils executables after creation gets installed in ~/opt/cross directory
+
+	--with-sysroot  enables sysroot support*(see at NOTES for more info)
+
+	--disable-nls	,this disables native language support so that it shows error only in english only
+	--disable-werror ,prevents all warnings from being treated as an error, can be useful if your compiler generates large number of warnings
+
+	make
+		this command creates all corresponding executatbles(tools) provided by the binutils, based on the Makefile in the directory,
+	make install
+		it installs all the created tools in --prefix="" directory as  mentioned above in our case ~/opt/cross
+
+with all the above commands we would have created a binutils 2.35 toolchain for i686 and and installed all associated tools in ~/opt/cross directory.
+
+
+
+now we perform the same for gcc, at this point i assume that  you have unzipped the gcc archived tar (gcc-10.2.0.tar.gz, consider it is in your ~/Downloads then go the src folder and run command  tar -xvf ~/Downloads/gcc-10.2.0.tar.gz)  donot repoen terminal other wise the created environment variables will become invalid because they exist only for a session
+
+	mkdir gcc-build	(creates ~/src/gcc-build)
+	cd gcc-build 
+	../gcc-10.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --disable-hosted-libstdcxx
+	make all-gcc
+	make all-target-libgcc
+	make install-gcc
+	make install-target-libgcc
+
+	../gcc-10.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --disable-hosted-libstdcxx
+	explanation of commands:
+	--target =$TARGET , specifies the type of target system (i686)
+	--prefix="$PREFIX", specifies the the installation directory of gcc tools
+	--disable-nls	,disable native language support
+	--enable-langugas, enables c, c++
+	--without-headers, ommits headers like stdio.h ,..etc which are generally included because we are going to write our own subroutines for them, in c
+	--disable-hosted-libstdcxx , ommits header files in c++
+
+	make all-gcc
+		generate all tools(exectables), for gcc toolchain but no libraries(libgcc, libstdc++) but contains front end and backend of GCC
+	make all-target-libgcc
+		genrerate all runtime target specific support library
+	make install-gcc 
+		install all tools created at time of make all-gcc in PREFIX directory
+	make install-target-libgcc
+		install all tools created at time of make all-target-libgcc in PREFIX directory
+
+after all these commands execute successfully you should have a stage 1 cross compiler ready for i686
+NOTE:
+	what  is sysroot?
+	it is directory that mimics the actual root of the system, it contains target specific headers, target specific libraries, 
+	when you use --with-sysroot or --sysroot=<dir>, system treats the current directory or <dir> as the root directory, and looks for headerfiles int <dir>/usr/include instead of /usr/include 
+	so it helps all our executables generated to look at  the sysroot  that contains the header for target architecture, and not architecture of native system for real root.
