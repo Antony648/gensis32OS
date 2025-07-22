@@ -1,3 +1,6 @@
+MAKEFILE
+the contents of make file are as follows:
+
 ASM=nasm
 BUILD_DIR=build
 SRC_DIR=src
@@ -23,4 +26,6 @@ bootloader:$(SRC_DIR)/bootloader/boot.asm
 clean:
 	rm -rf $(BUILD_DIR)/bootloader/boot.bin 
 	rm -rf $(BUILD_DIR)/kernel/*
+
+EXPLANATION:
 
