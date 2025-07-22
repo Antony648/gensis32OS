@@ -1,4 +1,4 @@
-cross compiler is neccessary for compiling programs to other architecutre not native to the system used to develop
+cross compiler is necessary for compiling programs to other architecutre not native to the system used to develop
 
 all linux systems by default contains gcc and binutils, these toolchains are native to the corresponding linux system version, so all the c programs that we write in that system and compile it using gcc in that system will get compiled so as to  get executables to run in the current system,
  
@@ -15,7 +15,9 @@ readelf	info about elf files
 
 there are much more.....
 
-so we have to create our own toolchains that can take a c program and create executable for out targert architecture(i386).
+o we have to create our own toolchains that can take a c program and create executable for out target architecture(i386).
+we have to install some tools for the same before we can proceed to the building of cross compiler
+i was using arch linux, but as odev resources align with debian linux , i have switched to 
 
 ALL THE COMMANDS BELOW ARE TAKEN FROM OSDEV, link: https://wiki.osdev.org/GCC_Cross-Compiler
 commands used and explanation:-
