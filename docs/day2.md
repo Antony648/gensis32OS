@@ -9,7 +9,7 @@ WORKDONE:
 NOTES:
     [theortical concepts](../notes/protected_mode)
     [program expalantion on theory grounds](../notes/enter_protect_mode)
-    [theroy on A20 and systemports](../notes/A20_gate)
+    [theroy on A20 and systemports](../notes/A20_gat)
 
 TOOLS:
     nasm,qemu,vim,hexdump,gdb

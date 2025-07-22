@@ -1,0 +1,47 @@
+read my notes on cross_cmp_debian 
+if you are using arch linux then this is for you with commands correspoinding to archlinux  to create tool chain of binutils-2.35 and gcc-10.2.0 for i686 
+commands :-
+export PREFIX="$HOME/opt/cross"
+export TARGET=i686-elf
+export PATH="$PREFIX/bin:$PATH"
+
+sudo pacman -S  --needed gmp mpfr libmpc texinfo git make gcc
+
+mkdir -p $HOME/src
+cd $HOME/src
+
+wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.xz
+wget https://ftp.gnu.org/gnu/gcc/gcc-10.2.0/gcc-10.2.0.tar.xz
+
+tar -xf binutils-2.35.tar.xz
+tar -xf gcc-10.2.0.tar.xz
+
+mkdir build-binutils
+cd build-binutils
+
+../binutils-2.35/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
+
+make 
+make install
+
+
+cd $HOME/src
+mkdir ./build-gcc
+cd ./build-gcc
+../gcc-10.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c --without-headers
+make all-gcc
+make all-target-libgcc
+make install-gcc
+make install-target-libgcc
+
+
+after all running all these  check if it is properly installed by using commands
+
+i686-elf-gcc --version
+i686-elf-as --version
+
+and 
+which i686-elf-gcc 
+	should return $HOME/opt/cross/*
+
+i have explained all the commands in the cross_cmp_debian pdf,if you want you can ensure the legitimacy of packages using hashes i have not done it here.
