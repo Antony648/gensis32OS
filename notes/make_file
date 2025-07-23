@@ -5,7 +5,7 @@ ASM=nasm
 BUILD_DIR=build
 SRC_DIR=src
 
-.PHONY: all bootloader kernel clean 
+.PHONY: all bootloader kernel clean kernel_asm_o
 all:	kernel bootloader
 	rm  $(BUILD_DIR)/final/os.bin
 	dd if=$(BUILD_DIR)/bootloader/boot.bin >> $(BUILD_DIR)/final/os.bin 
@@ -28,4 +28,73 @@ clean:
 	rm -rf $(BUILD_DIR)/kernel/*
 
 EXPLANATION:
+the explanation is not line by line but rather how this GNU Makefile will be processed, it is a logical pathway explanation rather than a parsed explanation
 
+here we have variables ASM,BUILD_DIR,SRC_DIR
+ASM refers to our assembler nasm , BUILD_DIR contains build directory and SRC_DIR contains source directory
+
+.PHONY: all bootloader kernel clean
+	this is to show that all, bootloader,kernel,clean are not files ,
+consider a scenario where there is a file called all,kernel,clean etc in the same directory as the Makefile, if we donot explicity say that it is not a file,  Makefile will see these files and assume that targets are met and  will execute commands under kernel,bootloader or clean,
+this is not a mandatory step and can be avoided if your projects directory does not happen to have any folders or files of the same name
+
+all: kernel bootloader
+	this line implies that all target requires two other targets to be met as prerequisites
+	so the control goes to kernel first 
+	
+
+	at kernel: we have a prerequisite kernel_asm_o
+	so control goes to kernel_asm_o
+	
+	at kernel_asm_o: we have  a prerequisite that is $(SRC_DIR)/kernel/kernel.asm
+	this file must be present at the specified location this is the assembly file assocated to our kernel it contains 32 bit protectecd  code of updating all seclectors with data_seg address form gdt(0x10), and enabling of A20 line at this point,
+	
+	the command that is associcated to kernel_asm_o in Makefile is
+	$(ASM) -f elf $(SRC_DIR)/kernel/kernel.asm -o $(BUILD_DIR)/kernel/kernel.asm.o 
+	this command uses nasm to create an elf formated object file for our kernel source code
+
+	and after executing this command it returns back to target kernel
+	commands at kernel;
+	i686-elf-ld  -g -relocatable $(BUILD_DIR)/kernel/kernel.asm.o -o $(BUILD_DIR)/kernel/kernelreloc.o
+
+	from the previous kernel.asm.o file created we create a relocatable object file using i686-elf-ld, now the object file created is a single unit, at this stage we could enter multiple files to combine them to get a single relocatable object file 
+
+
+	i686-elf-gcc -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel/kernel.bin -ffreestanding -O0 -nostdlib $(BUILD_DIR)/kernel/kernelreloc.o
+	
+	the final object file created from the previous stage is converted to the final binary file (kernel.bin) using the linker script(read linker_notes), and the binary file is made using --ffreestanding -nostdlib -O0 flags they mean, the .bin created is 
+	freestanding: that is it runs in completely freestanding environment so no assumptions are to be made by gcc
+	nostdlib:	prevents linker from pulling standard libraries  like glibc as we are writing our own OS, if out code tries to pull these stuff it might get complicated
+	-O0:		zero optimisation, we want our kernel code to be exactly as we wrote, it would be difficult during debugging, if gcc creates an optimised version of it
+	
+ 	after all these commands are executed we will have a the full binary equivalent of kernel code
+
+next perequisite of all is bootloader
+	bootloader has command 
+	 $(ASM)	-f bin $(SRC_DIR)/bootloader/boot.asm -o $(BUILD_DIR)/bootloader/boot.bin 
+	this will directly create a bin file for our bootloader , we do it in a single step because teh bootloader itself is 512 bits and asm file contains org 0x7c00 so we donot have to link it separately, so it is more of self contained and can be direcltly used to generate a bin file
+
+after the prerequisites are met we execute commands in all:
+	rm -rf $(BUILD_DIR)/final/os.bin
+	this is to remove the existing os.bin file because every time we run make , the commands below  are just appending bits to os.bin, so everytime we run make instead of creating a  new os.bin we are just appending, but we donot want that to happen so we delete the os.bin created in the previous make call, so that new data appended, appends to the new file that does not exist so technically empty , this is a very important step if you fail to write this instead of generating an updated version of os.bin , updated os file gets appended to end of existing os.bin
+	dd if=$(BUILD_DIR)/bootloader/boot.bin>>$(BUILD_DIR)/final/os.bin
+
+we append this to the begining of our os.bin, because that is where MBR should be it will be exacly 512 bytes, because that is how the boot.asm is created (times 510-($-$$) db 0x00) and last two bytes is 0xaa55
+
+	dd if=$(BUILD_DIR)/kernel/kernel.bin >>$(BUILD_DIR)/final/os.bin
+appends kenrel.bin at end of os.bin, but it is just a few bytes, but we access bytes in sectors
+so we add a 100 sectors later,
+	dd if=/dev/zero bs=512 count=100 >>$(BUILD-DIR)/final/os.bin
+this will take 512 bytes form /dev/zero(null bytes) and count like 100 times into os.bin, this is considered for file expansion, reserving space for adding newer feautures
+
+so all these command undergo execution, during the "make" command execution, and clean contains  commands for destorying everything that we build (except os.bin because it will get deleted everytime you run make, and if you explicitly destroy it in clean, it will cause an issue in all: becaue we try to delete it here and if it is aldready deleted, then it will cause our Makefile to crash).
+
+now why did take the the kernel.asm convert it to an elf object and then make it relocatable and then convert it to bin, this is because:
+step1:
+	convert .asm to -f elf .o , now the object file created contains neccessary symbols , this is neccessary for the stage 2 where we combine mulitple source files
+step2:
+	convert .o to relocatable .o , we can take mulitple .o files and combine them to create  a single ultimate objectfile with --relocatable , unresolved addresses , this unresolved address part is very neccessary for the next part as it uses a linker
+
+	convert .o to a .bin file, the ulitmate .o file created is a relocated, unresolved file which is resolved by our linkerscript to start .text section at 1MiB into the RAM, and all other sections as metntioned in the script.(see ./linker_notes)
+ now all the address and offset are hard coded (very similar to org in asm, but here we have some more control over the layout of segments because of the linker script)
+we have passed --nostdlib --ffreestanding etc flags ,even though bin contains only raw .text data in general, because we want to ensure that gcc does not sneak any unwanted dependecies to our bin file created.

@@ -1,0 +1,18 @@
+ENTRY(_start)
+OUTPUT_FORMAT(binary)
+SECTIONS
+{
+	. = 1M;
+	.text :{*(. text)}
+	.rodata :{*(.rodata)}
+	.data :{*(.data)}
+	.bss :{*(COMMON) *(.bss)}
+}
+ 
+the explanation of the linker script
+it creates an output file of format .bin
+ the starting point of code is considered as _start, so it searches for label _start and considers it as start point for ./bin file created
+in SECTIONS we decclare the layout of section in the final bin file and also what all sections will be present, also we assume that the os will load the program at 1MiB into RAM, so that all addresses and offsets are hardcoded with respect to that .text section will be assumed to be at 0x100000 ,followed by .rodata, .data, .bss respectively, 
+	setting .=1M is very similar to org 0x100000
+
+consider the asm file that has some code before the _start label, then the code from the very begining will be given 0x100000 but the execution starts at 0x100000+offset where _start begins, those code before _start doesnot get executed in a normal order unless explicitly jumped 
