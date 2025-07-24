@@ -1,0 +1,13 @@
+ALGINMENT NOTES
+	this is not regarding any programming aspect or os concept, it is regarding combining of our c files with assembly , the compiler that generates assembly code will generate code of size such that it aligns perfecly with multiples of 16, but if we create an assembly file and then combine multiple object files of c and assembly using compiler, then it will cause alignment issues which we should take care of,  so best way to create a linker script such that the .asm section is at the end and as it is at the end there is no sections behind it and it will not disurpt the alginment of any sector as all of them are above.
+
+and all assembly files that we create should have .section asm to notify the linker to that this code in this asm file has to be put in the last section (.asm)
+
+only one assembly code has an execption that is kernel.asm it should neccessarily be at 0x100000 in ram so it should  be immediately  behind mbr it should be  at the begining of sector 1 (sector 0 assuming to be MBR), so to ensure that it does not break the alignmet, we  
+do 
+	times 512-($-$$) db 0x0	 this fills up remaining space so as to make the code 1 sector wide
+
+	so if you donot include this line os.bin (in previous scenario)would be, 1(MBR)+(40bytes (max)kernel.asm code)+100 blank sectors
+
+	after this command os.bin would be
+	1(MBR)+1(kernel.asm code)+100 blank sectors

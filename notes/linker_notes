@@ -3,10 +3,11 @@ OUTPUT_FORMAT(binary)
 SECTIONS
 {
 	. = 1M;
-	.text :{*(. text)}
-	.rodata :{*(.rodata)}
-	.data :{*(.data)}
-	.bss :{*(COMMON) *(.bss)}
+	.text :ALIGN(4096) {*(. text)}
+	.rodata :ALIGN(4096) {*(.rodata)}
+	.data :ALIGN(4096) {*(.data)}
+	.bss :ALIGN(4096) {*(COMMON) *(.bss)}
+	.asm:ALIGN(4096){*(asm)} 
 }
  
 the explanation of the linker script
@@ -16,3 +17,6 @@ in SECTIONS we decclare the layout of section in the final bin file and also wha
 	setting .=1M is very similar to org 0x100000
 
 consider the asm file that has some code before the _start label, then the code from the very begining will be given 0x100000 but the execution starts at 0x100000+offset where _start begins, those code before _start doesnot get executed in a normal order unless explicitly jumped 
+
+here the ALIGN keyword is used to fill up values into sections so that they always align themselves in multiples of value passed as parameter
+ALIGN(4096) ; that is 4KB, the section tries to align itself to 4KB , if it is less than 4KB it fills up extra space to reach  4KB, or if it greater than 4KB, then it fills up extra spacet to reach the nearest multiple
