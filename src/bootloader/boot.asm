@@ -102,14 +102,14 @@ ata_lba_read:
 .read_sect:
 	mov	cx,0x100	;512/2=256=0x100
 	mov	dx, 0x1f0
+	cld			;ensure read always goes forward
 	rep	insw		;reads 16bit value form 0x1f0 and 0x1f1 and store them to memory address pointed to by es:di and es:di+1
 ;increment di by 2 and decrement cx by 1 and check if cx is 0 
 ;the cx part is done by rep, moving of 2 bytes from sector number in bin file to es:di in ram is done by insw
 	pop 	ecx	
-	dec	ecx
 	add	edi,0x200
-	cmp	ecx,0
-	jg	.call_read_sect
+	dec	ecx
+	jnz	.call_read_sect
 
 jmp 	0x100000 	;jmps to location 1MiB in ram as cs is adready set
 	
