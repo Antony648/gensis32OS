@@ -1,7 +1,7 @@
 ASM=nasm
 BUILD_DIR=build
 SRC_DIR=src
-FLAGS=  -g 	-ffreestanding	-falign-jumps -falign-functions=1 -falign-labels -falign-loops -fstrength-reduce  -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+FLAGS=  -g 	-ffreestanding	-falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce  -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 KERNEL_FILES= ./build/kernel/kernel.asm.o  ./build/kernel/kernel.o 
 .PHONY: all bootloader kernel clean 
 all:	kernel bootloader

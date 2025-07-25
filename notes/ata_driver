@@ -130,7 +130,7 @@ ata_lba_read:
 	rep	insw		;insw reads 16bit value form 0x1f0 and 0x1f1 and store them to memory address pointed to by es:di and es:di+1
 ;increment di by 2 and decrement cx by 1 and check if cx is 0 
 ;the cx part is done by rep, moving of 2 bytes from sector number in bin file to es:di in ram is done by insw
-	add	edi,0x200
+	;add	edi,0x200  donot add this is explained later insw auto increments edi 
 	pop 	ecx	
 	dec	ecx
 	jnz	.call_read_sect
@@ -224,7 +224,7 @@ ata_lba_read:
 ;increment di by 2 and decrement cx by 1 and check if cx is 0 
 ;the cx part is done by rep, moving of 2 bytes from sector number in bin file to es:di in ram is done by insw
 	pop 	ecx	
-	add	edi,0x200
+	;add	edi,0x200    donot add this comment it out , insw auto increments it (i lost half a day debugging)
 	dec	ecx
 	jnz	.call_read_sect
 
@@ -349,12 +349,12 @@ insw means insert word it means to insert 2bytes(16bits) of data into location i
 even if we are in 32 bit protected mode, word size is considered to 16 bits in general in x86 assembly espcially when it comes to talking to i/o ports whic talk in 16bits
 this snippet will write 1 sector into location specified by es:di
 
-	add	di,0x200
+	;;add	di,0x200      donot add this,comment it out was a bug, insw auto incrments edi by 2 
 	pop	ecx
 	dec	ecx
 	jnz	.call_read_sect
 
-it increments di by 0x200 (512 bytes)so that it points to next sector, and we pop back the stored value of ecx, this for counting how much sectors we copied and how much remains if it is zero we can exit from loop
+and we pop back the stored value of ecx, this for counting how much sectors we copied and how much remains if it is zero we can exit from loop
 we decrement ecx, this is to reduce count by one because we wrote 1 sector, then we call the whole operation again for writing next sector if number of sectors to be written to ram is nonzero
 
 	jmp	0x100000

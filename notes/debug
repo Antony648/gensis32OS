@@ -1,0 +1,18 @@
+
+the bug was that after loading sector 1 to sector 100 in ram at 0x100000, and trying to execute that code, when kernel.asm calls kernel_main function, it calls to correct memory address(0x100200) , but kernel.c code is not present there, it is located a sector away at 0x100400,where it should not be
+
+in my bootloader i gave
+	mov edi,0x200 after writing a sector to a location in ram,but insw auto increments value of di so it was unneccsary, and what happened is that it loads sector1 at 0x100000 , sector2 at 0x100400 instead of 0x100200 because we were explicity adding 0x200 to edi, 
+i thought it was some issue with linker script or gcc adding some padding, but when i inspected the final .bin file i understood  it was exactly one sector behind the asmcode which where we want it to be, because of 
+		times 512-($-$$) db 0x0 
+command given at end of kernel.asm read  ./alignment_notes for further details
+
+so  i used obdump, hexdump for veiwing the binary files , objdump -D osdev/build/kernel/kernelreloc.o for seeing if kernel_main is pointing to 0x00200 and ,nop and ret at those addresses which I ensured
+	
+and i used hexdump for viewing the  os.bin file
+	hexdump osdev/build/final/os.bin
+
+and as os.bin is fine i assumed that some error occured in loading sectors in ram
+so i inspected atadirvers in osdev/src/bootloader/boot.asm to find the error
+
+once bug fixed, the function call goes correctly to 0x100200 and the shellcode corresponding to to kernel_main is present there
