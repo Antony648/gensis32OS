@@ -16,3 +16,5 @@ and as os.bin is fine i assumed that some error occured in loading sectors in ra
 so i inspected atadirvers in osdev/src/bootloader/boot.asm to find the error
 
 once bug fixed, the function call goes correctly to 0x100200 and the shellcode corresponding to to kernel_main is present there
+
+i spent half a day trying to fix this bug

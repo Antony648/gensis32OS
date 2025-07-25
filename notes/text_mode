@@ -1,0 +1,53 @@
+TEXT MODE
+	it is a simple mode used in legacy systems and x86 system for outputting characters into a computer screens , it essentially enables us to use the os in a console mode, the whole computer screen is treatedas a grid of charactres instead of pixels, which enables us to write a n ASCII character to location(row,column) in the grid, and we can choose from about 16 different colours,
+
+it is comparitevely faster than graphical interfaces and eaiser to implement because we are not rendering every pixel but every letter or every, cell in the grid,
+
+genral resolution, 80column x 25rows
+	each cell has a character which is marked by 2 bytes, 
+	1byte= ASCII character
+	2byte=color
+	
+vedio memorystarts at 0xb800
+char* vedio=(char*) 0xb800;
+vedio[0]= 'h';
+vedio[1]=0x1f;
+
+this will give a h at the top left corner
+ 
+the color attribute which is the byte followed by ascii char
+has the following  format:
+
+lower 4bits (0-3):foreground (4bits, 15colours)
+upper 3bits (4-6):background (3bits, 7colours)
+bit 7: blink bit
+
+foreground colours
+code		color
+0		black
+1		blue
+2		green
+3		cyan
+4		red
+5		magenta
+6		brown
+7		light grey
+8		dark grey
+9		bright blue
+10		bright green
+11		bright cyan
+12		bright red
+13		bright magenta
+14		yellow
+15		white
+
+background colour
+code		color
+0		black
+1		blue
+2		green
+3 		cyan
+4		red
+5		magenta
+6		brown
+7		light grey
