@@ -72,8 +72,8 @@ void kernel_main()
 {
 	clear_screen();
 	char str[13]="jesus";
-	print_string_x_y(str,40,23,15);
-	char str1[20]="hello\nworld\tnow";
+	print_string_x_y(str,40,2,15);
+	char str1[76]="hello friend\nHello, friend? Thats lame.Maybe I should give you a name ";
 	print(str1);
 	return;
 }

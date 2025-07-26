@@ -1,0 +1,70 @@
+INTERRUPT DESCRIPTOR TABLE(IDT)
+	it is a table ued in x86 protected mode ,where each entry of table contains information about how to handle a particular interrupt or exception, each entry includes:-
+	i)address of an ISR(INTERRUPT SERVICE ROUTINE)
+	ii)the segment selector
+	iii)attributes
+
+how IDT  and interrupts work
+
+	when a particular interrupt is called, the corresponding interrupt number is obtained by the CPU, it calculate the offset (location) of the descriptor of that particular interrupt in IDT, and from there it gets ISR, segment selector and attributes . Based on this info it jumps to the location of ISR and executes according the info given by the attributes of interrupts entry, after execution it return control where it left off.
+
+INTERRUPT DESCRIPTOR TABLE:
+
+offset		46-63		offset 16-31			higher  part of address
+
+P		47		present 			zero for unused interrupts
+
+DPL		45-46	        descriptor privillege level	ring level of interrupts
+
+S		44		storage segment			set to zero for trap gates
+
+Type		40-43		gate type			type this gate interrupt is treated as
+
+O		32-39		unused	0-7			unused bts in structure
+
+Selector	16-31		selector 0-15			which gdt entry should be selectors bound to for the interrupt
+
+offset		0-15		offset 0-15			lower part for execution. 
+
+
+C structure:
+	struct idt_desc
+	{
+		uint16_t offset_l;	//offset low
+		uint16_t selector;	//selector gdt or ldt
+		uint8_t	unused;		//unused set zero
+		uint8_t	attr;		//gate type,storagesegment,descriptor privillege level
+		uint16_t offset_h;	//offset high
+	}__attribute__((packed));
+
+__attribute__((packed)) is important because gcc will try to rearrange for layout but it will disrupt our idt entry .
+
+INTERRUPT GATE TYPES
+
+name			value			description
+
+
+32bit taskgate		0x05			task gate reference TSS descriptors
+16bit interrupt 	0x06			used for interrupts that we invoke for ourselves
+16bit trap gate		0x07			trap gates are just like interrupt gates but disable other interrupts and re-enable them on iret
+
+32bit interrupt		0x0e			just like 16bit interrupt gates but 32 bits
+32bit trap gate 	0x0f			just like 16bit interrupt gates but 32bits
+
+
+INTERRUPT DESCRIPTOR ARRAY(implementation of IDT)			
+	struct idt_desc IDT[NO_OF_INTERRUPTS];  so we can create an array of idt_desc where each entry is a descriptor of an interrupt
+
+INTERRUPT DESCRIPTOR TABLE DESCRIPTOR
+it can be seen very similar to descriptor of gdt that we load to lgdt, but for idt,
+	struct idtr_desc
+	{
+		uint16_t limit;	// length of idt -1
+		uint32_t base;  // starting address of idt	
+	}__attribute__((packed));	
+
+LIDT INSTRUCTION:
+loading of idt is very similar to that of gdt, we used lgdt for loading gdt in our bootloader , here we use lidt insrtuction, we pass the address of the idt descriptor the structure created above
+	lidt [idt_descriptor]
+
+we can  load IDT any where in memory, 
