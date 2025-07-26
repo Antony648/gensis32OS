@@ -2,6 +2,7 @@
 #define  ESSENTIALS_H
 
 #include <stdint.h>
+#include <stddef.h>
 void* memset(void*s, int c, size_t n);		//exactly like memset from libc
 void* memset_fast(void*	s,int c,size_t n); //writes 4bytes at a time so faster
 

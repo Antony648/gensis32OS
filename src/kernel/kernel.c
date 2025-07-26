@@ -1,5 +1,5 @@
 #include "kernel.h"
-#include <stdint.h>
+
 #include <stdbool.h>
 uint16_t* vedio=(uint16_t*)0x000b8000;
 uint16_t cursor_x=0;

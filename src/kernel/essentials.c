@@ -30,4 +30,5 @@ void* gen_memset(void* s, int c, size_t n)
 		memset_fast(s,c,n);
 	else
 		memset(s,c,n);
+	return s;
 }
