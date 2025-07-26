@@ -1,6 +1,7 @@
 #include "kernel.h"
-
+#include "idt.h"
 #include <stdbool.h>
+extern void problem();
 uint16_t* vedio=(uint16_t*)0x000b8000;
 uint16_t cursor_x=0;
 uint16_t cursor_y=0;
@@ -78,9 +79,8 @@ void print(char * str)
 void kernel_main()
 {
 	clear_screen();
-	char str[13]="jesus";
-	print_string_x_y(str,40,9,15);
-	char str1[76]="hello friend\nHello, friend? Thats lame.Maybe I should give you a name ";
-	print(str1);
+	idt_init();
+	print("hello world\n");
+	problem();
 	return;
 }

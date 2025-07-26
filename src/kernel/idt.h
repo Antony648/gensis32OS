@@ -27,4 +27,6 @@ struct idtr
 	uint16_t len;	//size of idt-1 in bytes 
 	uint32_t addr;  //address of idt
 }__attribute__((packed)); 
+
+void idt_init();
 #endif
