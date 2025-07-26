@@ -1,7 +1,7 @@
-#include "osconfig.h"
+#include "../osconfig.h"
 #include "idt.h"
-#include "essentials.h"
-#include "kernel.h"
+#include "../essentials/essentials.h"
+#include "../kernel.h"
 extern void load_idtr(void* ldtr_addr);
 extern void sr0();
 struct idt_desc idt_table[TOTAL_INTERRUPTS];

@@ -1,5 +1,5 @@
 #include "kernel.h"
-#include "idt.h"
+#include "./idt/idt.h"
 #include <stdbool.h>
 
 uint16_t* vedio=(uint16_t*)0x000b8000;
