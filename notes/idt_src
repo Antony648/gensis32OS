@@ -1,0 +1,105 @@
+#include "../osconfig.h"
+#include "idt.h"
+#include "../essentials/essentials.h"
+#include "../kernel.h"
+extern void load_idtr(void* ldtr_addr);
+extern void sr0();
+struct idt_desc idt_table[TOTAL_INTERRUPTS];
+struct idtr idtr_descriptor;
+void divide_zero()
+{
+	print("divide by zero error\n");
+}
+//function to setup a standard idt entry of type 32IKC31
+void setup_idt32IKC31(uint32_t interrupt_no, void* address)
+{
+	 
+	idt_table[interrupt_no].offset_l =(uint32_t)address & 0x0000ffff;  //we cancel upper 16btis
+	idt_table[interrupt_no].offset_h=((uint32_t)address )>>16; // we zeroed lower 16bits and rightshift 16
+	idt_table[interrupt_no].selector=KERNEL_CODE_SELECTOR;
+	idt_table[interrupt_no].attr=_32INTERRUPT_KC_3_1;
+	idt_table[interrupt_no].zero=0x00;
+}
+void idt_init()
+{
+	
+    memset(idt_table,0,sizeof(idt_table));	//clear descriptor table
+    
+    idtr_descriptor.len=sizeof(idt_table)-1; 
+    idtr_descriptor.addr=(uint32_t)idt_table;
+		//set values for  idtr_descriptor
+	setup_idt32IKC31(0x20,sr0);
+		//load address for ISR 0x00
+    load_idtr(&idtr_descriptor);
+		//load value of idt table
+	print("interrupt descriptor table loaded\n");
+}
+
+here we include osconfig.h for TOTAL_INTERRUPTS
+idt.h because it contains the structures for idt_desc and idtr and also this acts as source file for idt.h
+essentials.h for memset
+kernel.h for print
+
+struct idt_desc idt_table[TOTAL_INTERRUPTS]
+this will create an array of structures of idt_desc and the number of elements is TOTAL_INTERRUPTS
+idtr_descriptor is a structure of idtr, that could be passed to lidt
+
+divide_zero() is a function that just prints "divide by zero" error
+void setup_idt32IKC31(uint32_t interrupt_no, void* address);
+	this setsup the idt entry mentioned by interrupt_no, to 32interruptgate with 3rd layer ,
+
+
+void idt_init()
+{
+	
+    memset(idt_table,0,sizeof(idt_table));	//clear descriptor table
+    
+    idtr_descriptor.len=sizeof(idt_table)-1; 
+    idtr_descriptor.addr=(uint32_t)idt_table;
+		//set values for  idtr_descriptor
+	setup_idt32IKC31(0x20,sr0);
+		//load address for ISR 0x00
+    load_idtr(&idtr_descriptor);
+		//load value of idt table
+	print("interrupt descriptor table loaded\n");
+}
+ it sets the value of idt table to 00 so any prexisting data in the location, allocated will be set to zero,
+
+ idtr_descriptor sets the value of len to idt_table-1,  and address to idt_table, so we setup the value of idtr_descriptor, now idtr_descriptor value is populated and ready to be given to lidt,
+
+we set 0x20 as sr0. i planned it to give it for 0x00, but wanted to check if it works for any interrupt number passed so i gave 0x20, so afteand passed sr0, this is an assembly function that calls divide_zero, i used assembly because i wanted to use iret as sr0 is an isr and is supposed to end with an iret
+<nasm snippet of sr0>
+
+section .asm
+
+extern divide_zero
+global sr0
+sr0:	
+	pusha
+	call	divide_zero
+	jmp		$
+	popa
+	iret
+
+i have pushed all registers and called divide zero function, and left an infinite jump , because at this point i have not provided any mechanism to resolve the interrupt so if i donot prefrom an inifinite loop, the control goes to iret and returns to same code that made system throw an int 0x20, calling isr0 again this results in a triple fault and system reboot, 
+and 
+next we have load_idtr(&idtr_descriptor);
+this give the address of idtr_descriptor to the load_idtr function that will load the all set idtr_descriptor,
+load_idtr is created in assembly as but as a normal c function assembly correspondence,by setting its own frame pointer 
+<nasm snippet of load_idtr>
+section .asm
+global load_idtr
+
+load_idtr:
+	push	ebp		
+	mov 	ebp,esp
+				;standard function prologue creates a new stack frame 
+	mov	ebx,[ebp+8]	;loads value of first parameter to ebx ebp=esp , last pushed value isactual ebp, and  rtn addr before that, and value before that is first parmeter
+	lidt	[ebx]
+				;standard function epilogue
+	pop	ebp
+	ret
+
+here we push ebp and then move esp to ebp, so now new frame is set, mov ebx,[ebp+8] .ebp=esp, last push in esp is the prior value of ebp, and return address before that so the address of first parameter is 2 locations above the current esp as esp and ebp are same , ebp+8 evaluates to address of first paramter which is the address of idtr_descriptor, this is moved to ebx, 
+now we give lidt [ebx]  , that loads the structure  of idtr_descriptor into lidt 
+and we print a message after everything is successfull

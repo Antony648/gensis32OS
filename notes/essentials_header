@@ -1,0 +1,14 @@
+#ifndef  ESSENTIALS_H
+#define  ESSENTIALS_H
+
+#include <stdint.h>
+#include <stddef.h>
+void* memset(void*s, int c, size_t n);		//exactly like memset from libc
+void* memset_fast(void*	s,int c,size_t n); //writes 4bytes at a time so faster
+
+void* gen_memset(void* s, int c, size_t n); //most preferred will pick form memset and memset_fast based on alginment
+
+#endif
+
+it uses the normal header gaurds and then includes stdint.h and stddef.h as we are using uint32_t, uint8_t and uint16_t and size_t
+we have included prototypes of all function definitions, in essentials.c1

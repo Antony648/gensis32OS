@@ -1,0 +1,79 @@
+#include "essentials.h"
+#
+
+void* memset(void* s, int c, size_t n)
+{
+	uint8_t* s1=(uint8_t*)s;
+	for(size_t i=0;i<n;i++)
+		s1[i]=(uint8_t) c;
+	return s;
+}
+
+void* memset_fast(void*	s,int c,size_t n) //writes 4bytes at a time so faster
+{
+	uint32_t* s1=(uint32_t*)s; //
+	size_t n1=n/4;
+	uint32_t val;
+	uint32_t* ptr=& val;
+	memset( ptr,c, 4);	//after this call val will contain 4bytes repeated values of that particular bit
+
+	for(size_t i=0;i<n1;i++)
+		s1[i]=val;
+	ptr=(void*)(&s1[n1]);
+	memset(ptr,c,n%4);
+	return s;
+
+}
+
+void* gen_memset(void* s, int c, size_t n)
+{
+	if (((uintptr_t)s%4)==0)              //typecasts s to an unsigned integer pointer value type that can used to perform arithemetic operations enabling us to perfrom arithemetic operations
+		memset_fast(s,c,n);
+	else
+		memset(s,c,n);
+	return s;
+}
+
+we implement the memset function
+
+void* memset(void* s, int c, size_t n)
+{
+	uint8_t* s1=(uint8_t*)s;
+	for(size_t i=0;i<n;i++)
+		s1[i]=(uint8_t) c;
+	return s;
+}
+we assign the pointer obtained as first parameter to s1 and typecasts it as uint8_t pointer, because we cannot perform operations on void*,
+and then perform a loop for n times, that writes the byte passed as c, to byte and incremets i each time
+
+
+void* memset_fast(void*	s,int c,size_t n) //writes 4bytes at a time so faster
+{
+	if(n<5)
+	{
+		memset(s,c,n);return s;
+	}
+	uint32_t* s1=(uint32_t*)s; //
+	size_t n1=n/4;
+	uint32_t val;
+	uint32_t* ptr=& val;
+	memset( ptr,c, 4);	//after this call val will contain 4bytes repeated values of that particular bit
+
+	for(size_t i=0;i<n1;i++)
+		s1[i]=val;
+	ptr=(void*)(&s1[n1]);
+	memset(ptr,c,n%4);
+	return s;
+
+}
+this is a fast altrenative for memset which writes to 4bytes at a time, it typecasts to 4btye pointer (uint32_t*), then divides n by 4 times  because as we are writing 4 bytes at a time we need to perform only 1/4th times as performed before,we need a filler value that contains of 4 bytes of required 4bytes of repeated value of c, so we creat e vaiable value of uint32_t and create a pointer to it and pass it ot memset with 4 so our normal memset fills it with 4reapeated bytes of value c this can be used as value to be written into data as 4byte chunks, so no w perform a for loop for n1 iterations and write val for n1 times starting from s1, now if if n is not a mulitple of 4 we would have to fill remaining bytes of data, these are less than 4 bytes in size so we use memset, to fill the remain bytes and pass the address of last location in s1 where data was filled, by typecasting it as void* [(void*)(&s1[n1])] and memset it n%4 times and returns
+
+void* gen_memset(void* s, int c, size_t n)
+{
+	if (((uintptr_t)s%4)==0)              //typecasts s to an unsigned integer pointer value type that can used to perform arithemetic operations enabling us to perfrom arithemetic operations
+		memset_fast(s,c,n);
+	else
+		memset(s,c,n);
+	return s;
+}
+this is the most ideal one as it checks for alignment issues and decides memset or memset_fast to use
