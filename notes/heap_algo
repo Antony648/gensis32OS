@@ -1,0 +1,44 @@
+THIS HEAP ALGO WILL WORK ONLY AT USER LEVEL  AND NOT COMPARABLE TO ANY INDUSTRIAL STANDARD
+	THIS ALGO IS SOMETHING THAT CAME INTO IN MY MIND AND I ONLY HAVE THEROTICAL KNOWLEDGE
+	ABOUT THIS AND IT HAS LOW EFFECIENCY DUE TO LINEAR SCAN, I WILL IMPLEMENT IT LATER AND 
+	THIS IS NOT USABLE AS KERNEL LEVEL ALLOCATOR, PLEASE KEEP IN MIND :) 
+	the code and header file is implemented at ../src/kernel/gen32_heap directory
+so first fit or best fit algorithms are not gonna workout, we need better, we should create something that searches for 
+i)block of exactly same size as the required (most favourable)
+ii)block of size that has size such that if we spilt it we still get a reasonable block of a standard size(fair)
+iii)block of size so close to required size that cannot be split to get anything usefull so we round it off(wastage of memory)
+iv)at end, when none of these match(default)
+instead of a block pointio
+
+in
+algo plan:
+	we want alignment for our heap so we allocate only on mulitples of 16,
+	we start heap at 0x1000000 a muliple of 16, and we round all our mallocs to muliples of 16
+	malloc(x) actually implies malloc(((x/16)+(x%16))*16)
+	
+my algo what i am going to choose on priority basis
+	priority one:	same size
+	priority two: split it , take only what is required and leave rest
+	priority three:	worst case(because  we consume the entire block if splitting does not give enough space to add a single block behind that , minimum threshold is 16 so space of 32bytes (16header+min sect size ))
+	priority four:	create new block at end, (last because size grows)
+
+so my plan
+	heap starts at a mulitple of 16, header is of size 16 , malloc sizes are rounded to 16,
+	so all blocks will be aligned to 16, and all blocks are are mininum of 16 in gap.
+	I)we try to fine a block of size 16+size or put 16(rounded_size+1)
+	II) we try to find a block of size that is spittable any block of size 16(rounded_size+1), 16(rounded_size+1)+16*2+16n or 16*(roundeds_size+3+n),where n>=0, because a block should be a minium of 16bytes worth, and a block has a 16it header, so 32 extra then whatever reamains,
+	III) we try to find a block of size that is 16(rounded_size+1)+16 , because if it is 32 or more then it falls to category above
+	IV) last resort, allocate space at end
+	
+	create a struct prt that will point to our best candidate,init it with NULL
+	we compare size of all free blocks
+	first block comapre it with required size,if match we break and call the appropriate func,set it free to false and return cur+16 
+	if it is a priority 2 value like required size +32 or more we set it to  pointer, but we will change that for a priority 1 value or a smaller priority 2 value
+	if it is a priority 3 value like size+16 we will change it for a priority 2 or priority 1 value,if we get a priority 1 we break
+	if we end up with pointer NULL after iterating through all blocks if addr_n is 0x00. then we have to allocate some space at end
+	
+our priority is minimum fragmentation, so if we have mulitple prioriy 2 values , we choose the smallest out of them.
+only priority 2 is a set of multiple values , priority one is fixed , priority 3 is fixed and default is just alloc at end
+
+after every free we reset the blocks of heap os that adjacent blocks of free memory is combined to a singl one
+
