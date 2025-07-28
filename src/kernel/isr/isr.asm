@@ -7,7 +7,7 @@ extern no_interrupt
 global sr0
 global sr21
 global isr_x
-
+global sr20
 sr0:	
 	pushad
 	call	divide_zero
@@ -29,6 +29,13 @@ sr21:
 	sti
 	iretd
 	
+sr20:
+	pushad
+	
+	mov	al,0x20
+	out	0x20,al
+	popda
+	iretd
 isr_x:
 	cli
 	pushad

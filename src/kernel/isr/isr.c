@@ -7,11 +7,15 @@ void divide_zero()
 	}
 void int21_handler()
 {
-	//print("test int 0x21");
-	char a=inb(0x60);
-	print(&a);
+	print("test int 0x21");
+	//char a=inb(0x60);
+	//print(&a);
 	}
+void int20_handler()
+{
+	
+}
 void no_interrupt()
 {
-	print("isr not written yet..hehe");
+	//print("isr not written yet..hehe");
 	}

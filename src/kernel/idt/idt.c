@@ -6,6 +6,7 @@ extern void load_idtr(void* ldtr_addr);
 extern void sr0();
 extern void sr21();
 extern void isr_x();
+extern void sr20();
 struct idt_desc idt_table[TOTAL_INTERRUPTS];
 struct idtr idtr_descriptor;
 
@@ -33,6 +34,7 @@ void idt_init()
     
 	setup_idt32IKC31(0x00,sr0);  	//load address for ISR 0x00
 	setup_idt32IKC31(0x21,sr21);
+	//setup_idt32IKC31(0x20,sr20);
     load_idtr(&idtr_descriptor);	//load value of idt table
     
 
