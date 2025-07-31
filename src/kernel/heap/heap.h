@@ -14,7 +14,7 @@ struct heap_table	//insted of an array ,a struct containing start address
 					// and number of elements, we can implement this by creating a pointer and 
 					// and assigning it to a physical location in ram and then access as offset from there
 {
-	HEAP_BLOCK_ENTRY* entries;
+	heap_block_entry* entries;
 	size_t total;
 	};
 	
@@ -27,4 +27,7 @@ struct heap
 	void* end_addr;
 	
 	};
+int heap_create(struct heap* heap_val,void* ptr,void* end,struct heap_table* heap_t);
+void* heap_malloc();
+void* heap_free();
 #endif

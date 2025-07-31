@@ -10,4 +10,5 @@
 #define KHEAP_COUNT		25600  //no of 4kb pages possible in 100 mb 
 #define KHEAP_TABLE		0x7e00
 #define KHEAP_BLOCK_SIZE		4096
+#define KHEAP_BLOCK_SHIFT	12
 #endif
