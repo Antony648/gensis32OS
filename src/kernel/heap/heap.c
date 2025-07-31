@@ -1,14 +1,7 @@
-#include "heap.h"
+ #include "heap.h"
 
-uint8_t* heap_block_table=(uint8_t*)0x2000000;
-void heap_init()
+int heap_create(struct heap* heap_val,void* ptr,void* end,struct heap_table* heap_t)
 {
-	for(int i=0;i<HEAP_COUNT;i++)
-		heap_block_table[i]= 0x00;
-		
-	}
-	
-void free(void* ptr)
-{
-	
-	}
+	int ret=0;
+	return ret;
+}

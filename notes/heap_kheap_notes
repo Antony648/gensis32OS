@@ -1,0 +1,14 @@
+KERNEL HEAP 
+	it is the heap that is used by kernel for quick access of memory, we need to take a different
+	approach in building a kernel heap algo because kmalloc() expects, data to be in 4kb blocks 
+	that can be mapped to physical memory quickly, and the time constraint is high, and we need continous
+	blocks of data 
+	so implementation of malloc() is very different from kmalloc()
+	and also the kernel heap and user space heap is very far apart
+	
+	heap.h and heap.c will help us to create a heap they are not going to create the actual kernel heap 
+	itself but are more like functions that once created will be useful for creating heap structures
+	in our kernel heap we  are trying to create a heap of size 100mb
+	each block is of size 4096 bytes or 4kb
+	100mb is 1024*1024*100 bytes 
+	so total number of blocks are 25600 (1024*25)
