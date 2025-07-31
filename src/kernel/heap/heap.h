@@ -10,6 +10,12 @@ typedef unsigned char heap_block_entry;
 #define HEAP_BLOCK_TABLE_ENTRY_FREE		0x00
 #define HEAP_BLOCK_HAS_NEXT				0x80
 #define HEAP_BLOCK_IS_FREE				0x40
+
+#define HEAP_TABLE_BLOCK_START			0xc1
+#define HEAP_TABLE_BLOCK_END			0x01
+#define HEAP_TABLE_BLOCK_MID			0x81
+#define HEAP_TABLE_BLOCK_SINGLE			0x41
+#define HEAP_TABLE_BLOCK_NULL			0x00
 struct heap_table	//insted of an array ,a struct containing start address 
 					// and number of elements, we can implement this by creating a pointer and 
 					// and assigning it to a physical location in ram and then access as offset from there
@@ -28,6 +34,6 @@ struct heap
 	
 	};
 int heap_create(struct heap* heap_val,void* ptr,void* end,struct heap_table* heap_t);
-void* heap_malloc();
-void* heap_free();
+void* heap_malloc(struct heap* heap_val,size_t size);
+void heap_free(struct heap* heap_val, void* ptr);
 #endif

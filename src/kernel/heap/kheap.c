@@ -11,4 +11,14 @@ void kheap_init()
 	void* end=(void*)(KHEAP_START+KHEAP_SIZE_BYTES);
 	if(heap_create(&kernel_heap,(void*)KHEAP_START,end,&kernel_heap_table))
 		print("failed to create heap.\n");
-	}
+}
+
+void* kmalloc(size_t size)
+{
+		return heap_malloc(&kernel_heap,size);
+}
+
+void kfree(void* ptr)
+{
+	return heap_free(&kernel_heap,ptr);
+}

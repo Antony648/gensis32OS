@@ -2,6 +2,7 @@
 #include "./idt/idt.h"
 #include <stdbool.h>
 #include "./io/io.h"
+#include "./heap/kheap.h"
 
 extern void problem21();
 extern void enable_interrupts();
@@ -84,9 +85,14 @@ void kernel_main()
 {
 	clear_screen();
 	print("\t\tGENESIS-32 \nkernel loaded successfully.\n");
+	kheap_init();
 	idt_init();
 	
 	enable_interrupts();
 	//problem21();
+	void * ptr=kmalloc(50);
+	void * ptr2=kmalloc(5000);
+	if(ptr || ptr2)
+	{}
 	return;
 }
