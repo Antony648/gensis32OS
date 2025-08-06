@@ -32,11 +32,11 @@
 //lower 5 bits have the same purpose for bit ,so we can share bit maps
 typedef uint32_t dir_table_entries;
 //if things go right it should be a 32 bit value,
-typedef struct dir_table_entries* dir_table_address ;
+typedef  dir_table_entries* dir_table_address ;
 
 typedef uint32_t 	page_table_entries;
 
-typedef struct page_table_entries* page_table_address;
+typedef  page_table_entries* page_table_address;
 #define PAGING_PRESENT		0b00000001
 #define READ_AND_WRITE		0b00000010
 #define ACCESS_ALL 			0b00000100
