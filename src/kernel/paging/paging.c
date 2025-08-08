@@ -12,6 +12,7 @@ dir_table_address create_32_dir_table(uint32_t flags)
 	//to the corresponding entries to page directory table,
 	dir_table_address rtn_val= (dir_table_address)kzalloc(NO_DIR_ENTRIES*sizeof(dir_table_entries));
 	dir_table_entries index_val=0x00;
+	uint32_t* page_index=NULL;
 	if(rtn_val ==NULL)
 	{
 		print("create_32_dir_table,paging.c:page dir table was itself given NULL");
@@ -23,6 +24,7 @@ dir_table_address create_32_dir_table(uint32_t flags)
 		 return NULL;
 	}
 	dir_table_address index=rtn_val;
+	uint32_t offset=0x00;
 	for(int i=0;i<NO_DIR_ENTRIES;i++)
 	{
 		index_val=(dir_table_entries)kzalloc(NO_PAGE_ENTRIES*sizeof(page_table_entries)); 
@@ -31,7 +33,7 @@ dir_table_address create_32_dir_table(uint32_t flags)
 		//as address returned is a mulitple of 4096
 		//last 12 bits are aldready zero but quick asserting is cheap and helps in later debugging
 		//index[i] will increment  (4*i)bytes to index
-		if (index_val==NULL)
+		if ((uint32_t*)index_val==NULL)
 		{
 			print("create32_dir_table,paging.c:kzalloc in dir table gave NULL\n");
 			index[i]=0;
@@ -42,7 +44,17 @@ dir_table_address create_32_dir_table(uint32_t flags)
 			index[i]=0;
 		}
 		else
-		index[i]=(index_val & 0xfffff000)| (flags& 0xfff)| READ_AND_WRITE;
+		{
+			index[i]=(index_val & 0xfffff000)| (flags& 0xfff)| READ_AND_WRITE|PAGING_PRESENT;
+			//sets the flags and read write for directory entry
+			page_index=(uint32_t*)index_val;
+			for(int j=0;j<NO_PAGE_ENTRIES;j++)
+			{
+				page_index[j]=(offset)|(flags& 0xfff)| READ_AND_WRITE|PAGING_PRESENT;
+				offset+=0x1000;
+			}
+			
+		}
 		
 		//code for setting flags
 		
