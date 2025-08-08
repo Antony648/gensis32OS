@@ -1,6 +1,10 @@
 #include "paging.h"
 #include "../kernel.h"
 #include "../heap/heap.h"
+
+extern load_dir_table(dir_table_address);
+
+static dir_table_address  cur_dir_table=NULL;
 dir_table_address create_32_dir_table(uint32_t flags)
 {
 	//this function creates a directory table by allocating space(4kb) for itself
@@ -38,7 +42,7 @@ dir_table_address create_32_dir_table(uint32_t flags)
 			index[i]=0;
 		}
 		else
-		index[i]=(index_val & 0xfffff000)| (flags& 0xfff);
+		index[i]=(index_val & 0xfffff000)| (flags& 0xfff)| READ_AND_WRITE;
 		
 		//code for setting flags
 		
@@ -46,3 +50,11 @@ dir_table_address create_32_dir_table(uint32_t flags)
 	return rtn_val;
 	
 	}
+void set_dir_table(dir_table_address addr)
+{
+	load_dir_table(addr);	//asm function that sets the cr3
+	cur_dir_table=addr;
+	
+}
+
+

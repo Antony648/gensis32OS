@@ -35,8 +35,10 @@ typedef uint32_t dir_table_entries;
 typedef  dir_table_entries* dir_table_address ;
 
 typedef uint32_t 	page_table_entries;
-
 typedef  page_table_entries* page_table_address;
+
+dir_table_address create_32_dir_table(uint32_t flags);
+
 #define PAGING_PRESENT		0b00000001
 #define READ_AND_WRITE		0b00000010
 #define ACCESS_ALL 			0b00000100
