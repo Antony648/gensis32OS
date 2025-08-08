@@ -1,7 +1,7 @@
 [bits 32]
 section .asm
 
-global enable_paging
+global enable_paging_asm
 global load_dir_table
 
 
@@ -13,11 +13,13 @@ load_dir_table:
 	pop		ebp
 	ret
 
-enable_paging:
+enable_paging_asm:
 	push 	ebp
 	mov		ebp,esp
+	cli
 	mov		eax,cr0
 	or		eax,0x80000000
 	mov		cr0,eax 
+	sti
 	pop		ebp
 	ret

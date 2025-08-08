@@ -3,7 +3,7 @@
 #include "../heap/heap.h"
 
 extern load_dir_table(dir_table_address);
-
+extern enable_paging_asm();
 static dir_table_address  cur_dir_table=NULL;
 dir_table_address create_32_dir_table(uint32_t flags)
 {
@@ -57,4 +57,8 @@ void set_dir_table(dir_table_address addr)
 	
 }
 
-
+void enable_paging()
+{
+	//checks if any
+	enable_paging_asm();
+}

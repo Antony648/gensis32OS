@@ -38,6 +38,8 @@ typedef uint32_t 	page_table_entries;
 typedef  page_table_entries* page_table_address;
 
 dir_table_address create_32_dir_table(uint32_t flags);
+void set_dir_table(dir_table_address addr);
+void enable_paging();
 
 #define PAGING_PRESENT		0b00000001
 #define READ_AND_WRITE		0b00000010
