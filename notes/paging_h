@@ -1,0 +1,85 @@
+#ifndef PAGING_H
+#define PAGING_H
+
+#include <stdint.h>
+#include <stddef.h>
+	//page directory entry is a 32 bit structure having
+	//upper 20 bits of address to page table(12-31)
+	//4 bits after that in AVL(8-11)
+	//bit 7 for pagesize
+	//bit 6 for remaining one bit of AVL
+	//bit 5 for  Accessed bit
+	//bit 4 for PCD page cache disable
+	//bit 3 for PWT page write through
+	//bit 2 for U/S user/supervisor
+	//bit 1 for R/W read/write
+	//bit 0 for present bit
+	
+
+
+	//page directory entry is a 32 bit structure having
+	//upper 20 bits of address to page table(12-31)
+	//3 bits after that in AVL(9-11)
+	//bit 8 for GLOBAL
+	//bit 7 for PAT page attribute
+	//bit 6 for Dirty bit (to check if block data is modified)
+	//bit 5 for  Accessed bit
+	//bit 4 for PCD page cache disable
+	//bit 3 for PWT page write through
+	//bit 2 for U/S user/supervisor
+	//bit 1 for R/W read/write
+	//bit 0 for present bit
+//lower 5 bits have the same purpose for bit ,so we can share bit maps
+typedef uint32_t dir_table_entries;
+//if things go right it should be a 32 bit value,
+typedef  dir_table_entries* dir_table_address ;
+
+typedef uint32_t 	page_table_entries;
+typedef  page_table_entries* page_table_address;
+
+dir_table_address create_32_dir_table(uint32_t flags);
+void set_dir_table(dir_table_address addr);
+void enable_paging();
+
+int get_index_from_virt(uint32_t* virtual_address, uint32_t* dir_index, uint32_t* page_index);
+int set_page_table_enrty(dir_table_address dir_table,uint32_t* virt_addr,page_table_entries set_val,uint32_t flags);
+
+#define PAGING_PRESENT		0b00000001
+#define READ_AND_WRITE		0b00000010
+#define ACCESS_ALL 			0b00000100
+#define PAGE_WRITE_THROUGH	0b00001000
+#define PAGE_CACHE_DISABLE	0b00010000
+
+#define NO_DIR_ENTRIES		1024
+#define NO_PAGE_ENTRIES		1024
+#define PAGE_BLOCK_SIZE		4096
+#endif
+
+page_table_entries correspond to uint32_t because page table entries are 32 bit values, this is so as to give more clarity
+
+page_table_address is to point first address of the first entry of a page table, it works more like an integer array
+
+dir_table_entries correspond to uint32_t because directory entry table entries are also 32bit values, this is for clarity
+ 
+dir-table_addr is of a pointer to dir_table_entries, it helps it to behave more like an array
+
+THESE ARE THE FUNCTIONS USED
+i)dir_table_address create_32_dir_table(uint32_t flags);
+ 	this one creates a page directory table for mapping the entirety of 4gb address(of no of directory table entries as  NO_DIR_ENTRIES), it then allocates space for page tables for each of the page tables it allocated for entries, and then maps the address, 
+it also sets all the virtual address to physical address, the addressing is linear(at this stage), and returns the address of directory table, so in short, it  sets up page directory tables and page tables for all the entries and fill all the entries for created page tables, so as to create linear addressing
+
+
+
+ii)void set_dir_table(dir_table_address addr);
+	this will set the directory tables address to cr3 register and also sets the value of directory entry, to a static variable in paging.c
+iii)void enable_paging();
+	this will enable paging by calling assembly subroutine, enable_paging_asm
+
+iii)int get_index_from_virt(uint32_t* virtual_address, uint32_t* dir_index, uint32_t* page_index);
+	this function is will help us to find the index of at directory table and page table for virtual address entry.
+	this function returns 0 if everything works fine,it takes a virtual address, in the sense it takes 32bit,but last 12 bits are expected to be 0(or a mulitple of 4096,4kb aligned address), value that can be used to describe a page at a virtual level, this function helps us to find the corresponding page table and the corresponding entry in a given page tableof a virutal address, it will set the value of directory table index in dir_index (address  passed as 2nd param), and value of paging table index is stored at location of page_index(address passed as 3rd param)
+
+
+iv)int set_page_table_enrty(dir_table_address dir_table,uint32_t* virt_addr,page_table_entries set_val,uint32_t flags);
+	this function is to set a particular page table entry to a particular physical address and pass a set of flags,it takes a directory entry address, that is to find out what directory table to use, then it passes a virtual address to a 4kb block, or a 4kb aligned address,then we pass the physical  block that we want that virtual page to be associated to and then we pass flags forthat particular page entry.
+
