@@ -26,21 +26,34 @@ dir_table_address create_32_dir_table(uint32_t flags)
 
 
 	dir_table_address rtn_val= (dir_table_address)kzalloc(NO_DIR_ENTRIES*sizeof(dir_table_entries));
-this should fill the rtn_val with the address of the allocated page for directory table,  it asks for a block of size 4kb(4096 bytes, 4*1024),so a single block is allocated an 
-	dir_table_entries index_val=0x00;
+this should fill the rtn_val with the address of the allocated page for directory table,  it asks for a block of size 4kb(4096 bytes, 4*1024),so a single block is allocated and its address is returned, if kzalloc returns null it means no space was allocated and function exits
+
+	dir_table_entries index_val=0x00;	
 	uint32_t* page_index=NULL;
+
+these two are meant to be used as values for index and looping
+
 	if(rtn_val ==NULL)
 	{
 		print("create_32_dir_table,paging.c:page dir table was itself given NULL");
 		return NULL;
 	}
+
+checks for null, if it is a null then we print this error message
+
 	else if((((uintptr_t)rtn_val)& 0xfff)!=0)
 	{
 		 print("create_32_dir_table,paging.c:page dir table was itself given unaligned addr");
 		 return NULL;
 	}
+we check if the returned address is 4kb aligned, if not it returns NULL
+
 	dir_table_address index=rtn_val;
 	uint32_t offset=0x00;
+
+this sets the directory table address to rtn_val,or in other words set it to address of directory table
+offset will be incremented and used for finding the entry in pagetables later in loop
+
 	for(int i=0;i<NO_DIR_ENTRIES;i++)
 	{
 		index_val=(dir_table_entries)kzalloc(NO_PAGE_ENTRIES*sizeof(page_table_entries)); 
@@ -78,6 +91,7 @@ this should fill the rtn_val with the address of the allocated page for director
 	return rtn_val;
 	
 	}
+
 void set_dir_table(dir_table_address addr)
 {
 	load_dir_table(addr);	//asm function that sets the cr3
@@ -96,8 +110,15 @@ int get_index_from_virt(uint32_t* virtual_address, uint32_t* dir_index, uint32_t
 	if (((uintptr_t)virtual_address & 0xfff )!=0)
 		return -GEN32_INVARG;
 
+checks if htge virtual address obtained is 4kb aligned, if not return invalid argument
+
 	*dir_index=(uintptr_t)virtual_address/(NO_PAGE_ENTRIES* PAGE_BLOCK_SIZE);
+
+set the value of dir_index to value of directory entry index, we obtain what index corresponds to a virtual page block, by dividing the total bytes mapped by a single dir table entry, one entry maps about 1024*4096 bytes, this is because each entry in directory entry table corresponds to a ppage table, in each page table we have 1024 entries and each are 4kb blocks , so 4096 bytes each so total bytes are, 1024*4096
+
 	*page_index=((uintptr_t)virtual_address%(NO_PAGE_ENTRIES*PAGE_BLOCK_SIZE))/PAGE_BLOCK_SIZE;
+
+to find the page index, we take the remainder of the above calculation, and divide it with size of a single page size, this is because remainder of the above operation gives the extra values(or offset into the table), but it is directly in bytes so to get the corresponding index, we divide it by size of a single page
 	
 	return 0;
 	
@@ -105,9 +126,13 @@ int get_index_from_virt(uint32_t* virtual_address, uint32_t* dir_index, uint32_t
 int set_page_table_enrty(dir_table_address dir_table,uint32_t* virt_addr,page_table_entries set_val,uint32_t flags)
 {
 		uint32_t dir_index,page_index;
+to be used as parameters in next function call
 		if(get_index_from_virt(virt_addr,&dir_index,&page_index)!=0)
 			return -GEN32_INVARG;
+
 		page_table_address pg_t=(page_table_address)(dir_table[dir_index]& 0xfffff000);
+this is to get the address of the page table, we take the value at the dir_table+ offset, set is lower 12 bits to 0,and obtain the page table address
 		pg_t[page_index]=set_val|flags;
+using the page table address obtained as a pointer or start of an array we can set the value of the physical page we want to associate and or the flags
 		return 0;
 }
