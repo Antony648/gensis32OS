@@ -4,6 +4,7 @@
 #include "./io/io.h"
 #include "./heap/kheap.h"
 #include "./paging/paging.h"
+#include "./disk/disk.h"
 
 extern void problem21();
 extern void enable_interrupts();
@@ -93,29 +94,22 @@ void kernel_main()
 	idt_init();
 	print("interrupt table loaded .....\n");
 	
-	enable_interrupts();
-	print("interrupts enabled....\n");
+	
 	
 	dir_table_address directory_table=create_32_dir_table(PAGING_PRESENT|READ_AND_WRITE);
 	print("directory table for 4gb set....\n");
 	set_dir_table(directory_table);
 	print("directory table loaded......\n");
 	
-	char* ptr=kzalloc(4096);
-	set_page_table_enrty(directory_table,(uint32_t*)0x1000,(page_table_entries)ptr,PAGING_PRESENT|ACCESS_ALL|READ_AND_WRITE);
-	//sets virtual address 1000 to physical address in ptr
+	
 	enable_paging();
 	print("paging enabled...\n");
 	
-	char* ptr2=(char*) 0x1000;	
-	ptr2[0]= 'A';		//should write to address of ptr because we have mapped it so
-	ptr2[1]='B';
+	char buf[512];
+	read_sect_disk(0,1,buf);
 	
-	print(ptr);		//should print AB because ptr and ptr2 should resolve to same address at physical level
-	//ptr before and after the mapping is same but address 0x1000 is not it points to something else or the 
-	//page that corresponds to virtual address 0x1000 does not resolve to 0x1000 at physical level because of 
-	//remapping
-	print(ptr);
+	enable_interrupts();
+	print("interrupts enabled....\n");
 	
 	
 	return;
