@@ -46,27 +46,57 @@ sysIDString			db  	'FAT16   '
 	it mentions the file system type
 
 the uppper 
+EXPALANTION:-
+	OEMIdentifier :this is an 8 byte feild that contains the original equipment manufacture identifier, it specifies the name of the operatiing system that formatted the volume, the value GEN32 OS is a custom identifier,
+
+	bytespersect:it is a 2byte field that indicates the number of bytes per sector, 0x200 is a common value for FAT16 it means 512 bytes
+
+	sectperclust:it is a single byte field that specifies how many sectors make up a cluster the value given here is 0x80, this evaluates to 128. this is relatively large compared to other implementations
+
+	reservedsect:it specifies the size of boot partition, it is generally a single sector, the value given os 0xc8, which evaluates to 200, this is huge, it has been given so because we have placed our kernel code here, so 200 sectors would be more than enough for it, for time being, actually we should place kernel as a file in data sector with its own cluster values in FAT and direntries, and code the bootloader to read fat and load it to a location 0x100000 in ram
+
+	fatcopies: it a single byte feild that says how many fat copies are present in total, we have given 0x02, meaning we have one for actual fat and one for backup just in case the first one gets corrupted
+
+	roodirentries:it is a 2 byte feild that specifies the maximium number of directory entries , all files have a directory entry this evaluates to how many files and subdirectories we can have, the value here is 0x40, (64) for now but will be expanded accordingly for more files
+
+	sectnum: this is a 2 byte feild that specifies the total number of sectors in the volume, this value is used for volumes with fewer sectors lesser than 65536, the value given is 0x00, meaning we will use value in sectbig
+
+	media type:this is a 1byte feild that specifies the media type,we gave 0xf8, this indicates harddrive
+
+	sectperfat: it is a 2 byte field tha indicates the number of sectors per fat table,size of fat table, whe have given 256, the size of FAT depends on the total number of clusters on the disk
+
+	sectpertrack: it a 2 byte field that represents the number of sectors per track,we have given a value of 0x20 (32 in decimal) it is a standard value,
+	
+	numheads:it is a 2 byte field that reperesents number of heads, we have given 0x40 meaning 64 in decimal, this is a standard value
+
+	hiddensect:it is 4byte feild that indicates the number of hidden sectors in the volume, 0x00 means hidden sectors
+
+	sectbig:	it is a 4 byte feild that represents number of sectors in the volume, 0x773594, is is common value for a harddisk partition and is used in sectnum since we gave it as 0x00
 
 
+EXTENDED BPB(BIOS PARAMETER BLOCK)
 
+	drivenum : it is 1 byte field that BIOS drive number,this typically corresponds to the first hand disk
+	WinNTBit:this is a 1 byte field is a reserved bit for windows NT
 
+	sign:this is a single byte field, it is set to 0x29 it indicates the presence of extended BPB feilds
+	volid:it is 4byte field that is unique volume serial number generated when the volume is formatted
+	volidstring:11byte field that says volume name
+	suyidstring:this is a 8byte field that indicates file system name as user readable string
 
+out of all the fields
+	volIDString
+	sysIDString
+	volID
+	OEMIdentifier
+are for only user understanding and are not so critical
 
+from the above setup we should undrestand as the current layout of our volume as
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+reserved sectors: sectors 0-199(200 sectors in total)
+FAT1:	sectors 200-445(256 sectors in total)
+FAT2:	secotrs 456-711(256 sectors in total)
+root dir: sectors 712-715(4 sectors in total)
+data area: remaining sectors 716-7812499
 
 

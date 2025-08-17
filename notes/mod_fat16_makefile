@@ -73,3 +73,17 @@ clean:
 	rm -rf $(BUILD_DIR)/kernel/paging/*
 	rm -rf $(BUILD_DIR)/kernel/disk/*
 	find $(BUILD_DIR)/kernel/ -maxdepth 1 -type f -delete 
+
+
+
+
+these are the parts that underwent changes from the previous case:
+all:	kernel bootloader
+	rm  $(BUILD_DIR)/final/os.bin
+	dd if=$(BUILD_DIR)/bootloader/boot.bin >> $(BUILD_DIR)/final/os.bin 
+	dd if=$(BUILD_DIR)/kernel/kernel.bin>> $(BUILD_DIR)/final/os.bin
+	dd if=/dev/zero bs=1048576 count=16 >> $(BUILD_DIR)/final/os.bin
+	sudo mount -t vfat $(BUILD_DIR)/final/os.bin ./mount/disk
+	sudo cp	./test.txt ./mount/disk
+	sudo umount ./mount/disk
+this has been added to make a test case for the the fat implementation and to make our os.bin to look like a fat file. first we move boot.bin to the os.bin, it is exactly a singl sector, then we append the kernel code and then we append 16mb worth of data, so we see that our entire os and bootloader sits in the first 200 reserved sector, and after first 200 sectors next 256+256 sectors are seen as fat1 and fat2 and next 256 sectors seen as root sector, and remaining for data, we then mount this to  directory called mount/disk on the project repo, and then use the linux to copy a file(test.txt), we then unmount it, on the hex dump we see some changes an entry in root sector a 0xffff value in fat tables(2 of them) this is because of a single cluster is saved for the file, same changes for both fats, we also see the test string in some location after the root sectors. 
