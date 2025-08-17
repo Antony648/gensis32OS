@@ -13,7 +13,7 @@ all:	kernel bootloader
 	sudo cp	./test.txt ./mount/disk
 	sudo umount ./mount/disk
 
-kernel:	kernel_asm_o	kernel_o 	idt_asm_o 	idt_o  essentials_o  isr_asm_o  io_asm_o   isr_o     heap_o  kheap_o  paging_asm_o paging_o  disk_o disk_stream_o
+kernel:	kernel_asm_o	kernel_o 	idt_asm_o 	idt_o  essentials_o  isr_asm_o  io_asm_o   isr_o     heap_o  kheap_o  paging_asm_o paging_o  disk_o disk_stream_o  string_o ctype_o
 	i686-elf-ld  -g -relocatable $(KERNEL_FILES)  -o  $(BUILD_DIR)/kernel/kernelreloc.o
 	i686-elf-gcc -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel/kernel.bin $(FLAGS) -ffreestanding -O0 -nostdlib  $(BUILD_DIR)/kernel/kernelreloc.o
 		
@@ -78,4 +78,6 @@ clean:
 	rm -rf $(BUILD_DIR)/kernel/heap/*
 	rm -rf $(BUILD_DIR)/kernel/paging/*
 	rm -rf $(BUILD_DIR)/kernel/disk/*
+	rm -rf $(BUILD_DIR)/kernel/string/*
+	rm -f  $(BUILD_DIR)/kernel/ctype/*
 	find $(BUILD_DIR)/kernel/ -maxdepth 1 -type f -delete 

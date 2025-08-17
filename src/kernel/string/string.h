@@ -2,6 +2,7 @@
 #define  STRING_H
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
 int strlen(const char* str);
 char* strcpy(char* dest,const char*src);
 char* strncpy(char* dest,const char*src,size_t n);

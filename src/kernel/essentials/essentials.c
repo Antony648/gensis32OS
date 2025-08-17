@@ -48,5 +48,5 @@ void* memcpy(void *dest, void* src,size_t n)
 	uint8_t * p2=(uint8_t*)src;
 	for(;n;p2++,p1++,n--)
 		*p1=*p2;
-	
+	return dest;
 }
