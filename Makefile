@@ -2,8 +2,8 @@ ASM=nasm
 BUILD_DIR=build
 SRC_DIR=src
 FLAGS=  -g 	-ffreestanding	-falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce  -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
-KERNEL_FILES= ./build/kernel/kernel.asm.o  ./build/kernel/kernel.o  ./build/kernel/idt/idt.o  ./build/kernel/essentials/essentials.o  ./build/kernel/idt/idt.asm.o ./build/kernel/isr/isr.asm.o ./build/kernel/io/io.asm.o ./build/kernel/isr/isr.o ./build/kernel/heap/heap.o ./build/kernel/heap/kheap.o ./build/kernel/paging/paging.asm.o ./build/kernel/paging/paging.o ./build/kernel/disk/disk.o ./build/kernel/disk/disk_stream.o
-.PHONY: all bootloader kernel clean kernel_asm_o kernel_o isr_asm_o isr_o idt_asm_o idt_o essentials_o  paging_asm_o paging_o disk_o  disk_stream_o
+KERNEL_FILES= ./build/kernel/kernel.asm.o  ./build/kernel/kernel.o  ./build/kernel/idt/idt.o  ./build/kernel/essentials/essentials.o  ./build/kernel/idt/idt.asm.o ./build/kernel/isr/isr.asm.o ./build/kernel/io/io.asm.o ./build/kernel/isr/isr.o ./build/kernel/heap/heap.o ./build/kernel/heap/kheap.o ./build/kernel/paging/paging.asm.o ./build/kernel/paging/paging.o ./build/kernel/disk/disk.o ./build/kernel/disk/disk_stream.o ./build/kernel/string/string.o ./build/kernel/ctype/ctype.o
+.PHONY: all bootloader kernel clean kernel_asm_o kernel_o isr_asm_o isr_o idt_asm_o idt_o essentials_o  paging_asm_o paging_o disk_o  disk_stream_o  string_o ctype_o
 all:	kernel bootloader
 	rm  $(BUILD_DIR)/final/os.bin
 	dd if=$(BUILD_DIR)/bootloader/boot.bin >> $(BUILD_DIR)/final/os.bin 
@@ -63,6 +63,12 @@ disk_o: $(SRC_DIR)/kernel/disk/disk.c
 disk_stream_o: $(SRC_DIR)/kernel/disk/disk_stream.c
 	i686-elf-gcc -I ./src	$(FLAGS) -c -std=gnu99 $(SRC_DIR)/kernel/disk/disk_stream.c  -o $(BUILD_DIR)/kernel/disk/disk_stream.o
 	
+string_o: $(SRC_DIR)/kernel/string/string.c
+	i686-elf-gcc -I ./src	$(FLAGS) -c -std=gnu99 $(SRC_DIR)/kernel/string/string.c  -o $(BUILD_DIR)/kernel/string/string.o
+	
+ctype_o: $(SRC_DIR)/kernel/ctype/ctype.c
+	i686-elf-gcc -I ./src	$(FLAGS) -c -std=gnu99 $(SRC_DIR)/kernel/ctype/ctype.c  -o $(BUILD_DIR)/kernel/ctype/ctype.o
+
 clean:
 	rm -rf $(BUILD_DIR)/bootloader/boot.bin 
 	rm -rf $(BUILD_DIR)/kernel/isr/*

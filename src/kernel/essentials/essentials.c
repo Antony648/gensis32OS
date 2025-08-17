@@ -32,3 +32,21 @@ void* gen_memset(void* s, int c, size_t n)
 		memset(s,c,n);
 	return s;
 }
+
+int memcmp(void *s1,void*s2,size_t n)
+{
+	uint8_t* p1=(uint8_t*)s1;
+	uint8_t * p2=(uint8_t*)s2;
+	for(;n--;p1++,p2++)
+		if(*p1 !=*p2)
+			return (int)(*p1-*p2);
+	return 0;
+}
+void* memcpy(void *dest, void* src,size_t n)
+{
+	uint8_t * p1=(uint8_t *)dest;
+	uint8_t * p2=(uint8_t*)src;
+	for(;n;p2++,p1++,n--)
+		*p1=*p2;
+	
+}
