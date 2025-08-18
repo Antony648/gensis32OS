@@ -84,6 +84,9 @@ void* malloc_32(void* page_addr,size_t size)
 void heap32_free(void* page_addr, void* block_addr)
 {
 	//uint32_t* addr=(uint32_t*)block_addr;
+	//check
+	if((uint8_t*)block_addr-(uint8_t*)page_addr<128)
+		print("heap32.c:heap32_free:invalid arg");
 	int index= (uint8_t*)block_addr-(uint8_t*)page_addr-DATA_OFFSET_BYTES;
 	uint8_t* index_addr=(uint8_t*)page_addr+index;
 	if(*index_addr ==0x41)

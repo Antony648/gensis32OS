@@ -6,6 +6,8 @@
 //this is strictly meant for allocating size for blocks
 //between 1-4kb,less than a page, the whole idea is to break
 //the existing 4kb chunk into 32byte blocks
+void heap32_free(void* page_addr, void* block_addr);
+void* malloc_32(void* page_addr,size_t size);
 
 #define DATA_OFFSET_BYTES  128
 #define DATA_OFFSET_BLOCK  4
