@@ -6,6 +6,6 @@ it is inspired on Daniel Mcarthys course on osdev
     bootloader
     custom GDT and IDT setup
     protected mode kernel
-    heap implementation
+    heap implementation with a slab allocator(additional)
     two level paging
     disk management

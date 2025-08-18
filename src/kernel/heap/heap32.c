@@ -1,7 +1,7 @@
 #include "heap32.h"
 #include "../error.h"
 #include "../kernel.h"
-int get_index(void* page_addr,uint32_t no_blocks)
+static int get_index(void* page_addr,uint32_t no_blocks)
 {
 	//search for continuous blocks of no_blocks
 	//first fit allocation
@@ -31,7 +31,7 @@ int get_index(void* page_addr,uint32_t no_blocks)
 	return rtn_val;
 	
 }
-int set_table_val(void* page_addr,int index,uint32_t no_blocks)
+static int set_table_val(void* page_addr,int index,uint32_t no_blocks)
 {
 	uint8_t* index_addr=(uint8_t*)page_addr+index;
 	if(no_blocks ==1)

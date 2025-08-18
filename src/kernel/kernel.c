@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "./io/io.h"
 #include "./heap/kheap.h"
+#include "./heap/heap32.h"
 #include "./paging/paging.h"
 #include "./disk/disk.h"
 #include "./disk/disk_stream.h"
@@ -114,13 +115,13 @@ void kernel_main()
 	enable_interrupts();
 	print("interrupts enabled....\n");
 	
-	struct disk_stream *ds=(struct disk_stream*)init_disk_stream(0);
-	 disk_stream_seek(ds, 0x201);
-	unsigned char c= 0;
-	get_bytes_from_disk(ds,1, &c);
-	while(1){}
-	free_disk_stream(ds);
+	void* block_4kb=kzalloc(1);	//should give us a block
+	int *a=(int *)malloc_32(block_4kb,sizeof(int));//should set the  begining of block to 0x41,and address (uint8_t*)block_4kb+128 to a
+	uint64_t * c=(uint64_t*)malloc_32(block_4kb,64);
+	char *b=(char *)malloc_32(block_4kb,sizeof(char));
 	
+	
+	while(a||b||c){}
 	
 	return;
 }
