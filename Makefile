@@ -2,8 +2,8 @@ ASM=nasm
 BUILD_DIR=build
 SRC_DIR=src
 FLAGS=  -g 	-ffreestanding	-falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce  -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
-KERNEL_FILES= ./build/kernel/kernel.asm.o  ./build/kernel/kernel.o  ./build/kernel/idt/idt.o  ./build/kernel/essentials/essentials.o  ./build/kernel/idt/idt.asm.o ./build/kernel/isr/isr.asm.o ./build/kernel/io/io.asm.o ./build/kernel/isr/isr.o ./build/kernel/heap/heap.o ./build/kernel/heap/kheap.o ./build/kernel/paging/paging.asm.o ./build/kernel/paging/paging.o ./build/kernel/disk/disk.o ./build/kernel/disk/disk_stream.o ./build/kernel/string/string.o ./build/kernel/ctype/ctype.o ./build/kernel/heap/heap32.o
-.PHONY: all bootloader kernel clean kernel_asm_o kernel_o isr_asm_o isr_o idt_asm_o idt_o essentials_o  paging_asm_o paging_o disk_o  disk_stream_o  string_o ctype_o heap32_o
+KERNEL_FILES= ./build/kernel/kernel.asm.o  ./build/kernel/kernel.o  ./build/kernel/idt/idt.o  ./build/kernel/essentials/essentials.o  ./build/kernel/idt/idt.asm.o ./build/kernel/isr/isr.asm.o ./build/kernel/io/io.asm.o ./build/kernel/isr/isr.o ./build/kernel/heap/heap.o ./build/kernel/heap/kheap.o ./build/kernel/paging/paging.asm.o ./build/kernel/paging/paging.o ./build/kernel/disk/disk.o ./build/kernel/disk/disk_stream.o ./build/kernel/string/string.o ./build/kernel/ctype/ctype.o ./build/kernel/heap/heap32.o ./build/kernel/heap/heap_cream.o
+.PHONY: all bootloader kernel clean kernel_asm_o kernel_o isr_asm_o isr_o idt_asm_o idt_o essentials_o  paging_asm_o paging_o disk_o  disk_stream_o  string_o ctype_o heap32_o heap_cream_o
 all:	kernel bootloader
 	rm  $(BUILD_DIR)/final/os.bin
 	dd if=$(BUILD_DIR)/bootloader/boot.bin >> $(BUILD_DIR)/final/os.bin 
@@ -13,7 +13,7 @@ all:	kernel bootloader
 	sudo cp	./test.txt ./mount/disk
 	sudo umount ./mount/disk
 
-kernel:	kernel_asm_o	kernel_o 	idt_asm_o 	idt_o  essentials_o  isr_asm_o  io_asm_o   isr_o     heap_o  kheap_o  paging_asm_o paging_o  disk_o disk_stream_o  string_o ctype_o heap32_o
+kernel:	kernel_asm_o	kernel_o 	idt_asm_o 	idt_o  essentials_o  isr_asm_o  io_asm_o   isr_o     heap_o  kheap_o  paging_asm_o paging_o  disk_o disk_stream_o  string_o ctype_o heap32_o heap_cream_o
 	i686-elf-ld  -g -relocatable $(KERNEL_FILES)  -o  $(BUILD_DIR)/kernel/kernelreloc.o
 	i686-elf-gcc -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel/kernel.bin $(FLAGS) -ffreestanding -O0 -nostdlib  $(BUILD_DIR)/kernel/kernelreloc.o
 		
@@ -71,6 +71,10 @@ ctype_o: $(SRC_DIR)/kernel/ctype/ctype.c
 	
 heap32_o: $(SRC_DIR)/kernel/heap/heap32.c
 	i686-elf-gcc -I ./src	$(FLAGS) -c -std=gnu99 $(SRC_DIR)/kernel/heap/heap32.c  -o $(BUILD_DIR)/kernel/heap/heap32.o
+
+heap_cream_o: $(SRC_DIR)/kernel/heap/heap_cream.c
+	i686-elf-gcc -I ./src	$(FLAGS) -c -std=gnu99 $(SRC_DIR)/kernel/heap/heap_cream.c  -o $(BUILD_DIR)/kernel/heap/heap_cream.o
+
 
 clean:
 	rm -rf $(BUILD_DIR)/bootloader/boot.bin 

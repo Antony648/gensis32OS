@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include "./io/io.h"
 #include "./heap/kheap.h"
-#include "./heap/heap32.h"
+#include "./heap/heap_cream.h"
 #include "./paging/paging.h"
 #include "./disk/disk.h"
 #include "./disk/disk_stream.h"
@@ -115,13 +115,58 @@ void kernel_main()
 	enable_interrupts();
 	print("interrupts enabled....\n");
 	
-	void* block_4kb=kzalloc(1);	//should give us a block
-	int *a=(int *)malloc_32(block_4kb,sizeof(int));//should set the  begining of block to 0x41,and address (uint8_t*)block_4kb+128 to a
-	uint64_t * c=(uint64_t*)malloc_32(block_4kb,64);
-	char *b=(char *)malloc_32(block_4kb,sizeof(char));
+	//heap cream tests
+	uintptr_t karray[5];
+	heap_cream_init(karray);
+	//karray is zeroed
+	void* p1=heap_cream_malloc(karray,32);
+	//should create an entry in karray pointing to first allocated pages,and p1 should be that address +0x80
+	void* p2=heap_cream_malloc(karray,32);
+	//should not create further entries in karray, should return p1+0x20 if working fine
+	void* p3=heap_cream_malloc(karray,96);
+	//shold not create further entries in karray, shoule return p1+0x40 if working fine
+	//the table inside karray should be 0x41 0x41 0xc1 0x81 0x01
+	heap_cream_free(karray,p2);
+	//should unset the second table entry of karray[0];
+	void* p5=heap_cream_malloc(karray,107);
+	//should give p5=p3+0x60 and set 
+	void* p4=heap_cream_malloc(karray,3899);
+	//should add one more entry to karray, and allocate space in that page
+	//break here to know if pages are resused and freed.
+	void* p6=heap_cream_malloc(karray,45);
+	//should allocate spece in first page array[0]
+	heap_cream_free(karray,p3);
+	//should free from first page , karray still should contains 2 values
+	heap_cream_free(karray,p4); 
+	//should remove second element from the karray
+	heap_cream_free(karray,p1);
+	//should change table in first block
+	heap_cream_free(karray,p2);
+	//should throw error as we double free it, 
 	
 	
-	while(a||b||c){}
+	heap_cream_free(karray,p5);
+	//should free
+	heap_cream_free(karray,p6);
+	//should completely free the karray
 	
+	
+	
+	void* p7=heap_cream_malloc(karray,4000);
+	//should give null, and message to use kzalloc
+	
+	
+	
+	heap_cream_free(karray,p7);
+	//should give false, and message that we tried to free null
+	
+	
+	
+	heap_cream_destroy(karray);
+	void* p8=kzalloc(1);
+	void* p9=kzalloc(1);
+	//check the values of p8 and p9 and value of  karray[0] and karray[1]. to know if its freed
+	kfree(p9);
+	kfree(p8);
 	return;
 }

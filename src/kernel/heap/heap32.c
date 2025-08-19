@@ -1,6 +1,14 @@
 #include "heap32.h"
 #include "../error.h"
 #include "../kernel.h"
+void table_guard_set(void* page_addr)
+{
+	uint8_t* table=(uint8_t*)page_addr;
+	table[124]=0xab;
+	table[125]=0xab;
+	table[126]=0xab;
+	table[127]=0xab;
+}
 static int get_index(void* page_addr,uint32_t no_blocks)
 {
 	//search for continuous blocks of no_blocks
@@ -65,10 +73,11 @@ void* malloc_32(void* page_addr,size_t size)
 {
 	//first 128 bytes are table
 	uint32_t no_blocks=(uint32_t)((size+31)>>5);
+	
 	int index=get_index(page_addr,no_blocks);
 	if(index <0)
 	{
-		print("heap32:could not get a block of that size,allocate one more page");
+		print("heap32:could not get a block of that size\n");
 		return NULL;
 	}
 	//we have index at this point actual address
@@ -81,38 +90,45 @@ void* malloc_32(void* page_addr,size_t size)
 	return (void*)((uint8_t*)page_addr+(DATA_OFFSET_BYTES+index* SIZE_OF_BLOCK_BYTE));
 	
 }
-void heap32_free(void* page_addr, void* block_addr)
+bool heap32_free(void* page_addr, void* block_addr)
 {
 	//uint32_t* addr=(uint32_t*)block_addr;
 	//check
 	if((uint8_t*)block_addr-(uint8_t*)page_addr<DATA_OFFSET_BYTES)
 	{	print("heap32.c:heap32_free:invalid arg");
-		return ;
+		return false;
 	}
 	
 	int index= (uint8_t*)block_addr-(uint8_t*)page_addr-DATA_OFFSET_BYTES;
 	uint8_t* index_addr=(uint8_t*)page_addr+(index/32);
+	//for abnormal cases
+	if(*index_addr == 0xab)
+	{
+		print("hit table end.\n");
+		return false;
+	}
 	
 	if(*index_addr ==0x00)
 	{
 		print("double free\n");
-		return;
+		return false;
 	}
 	if(*index_addr ==0x01 || *index_addr ==0x81)
 	{
 		print("incorrect\n");
-		return;
+		return false;
 	}
+	//for normal cases
 	if(*index_addr ==0x41)
 	{
-		*index_addr=0x00; return;
+		*index_addr=0x00; return true;
 	}
 	else
 	{
 		if(*index_addr!=0xc1)
 		{
-			print("corrupted\n");
-			return;
+			print("corrupted head\n");
+			return false;
 		}
 		*index_addr =0x00;
 		index_addr++;
@@ -122,7 +138,7 @@ void heap32_free(void* page_addr, void* block_addr)
 			//loop for destroying dragon's body full of 0x81
 			if(*index_addr!=0x81)
 			{
-				print("corrupted\n"); return;
+				print("corrupted mid\n"); return false;
 			}
 			*index_addr=0x00;
 			
@@ -130,4 +146,5 @@ void heap32_free(void* page_addr, void* block_addr)
 		//for destroying dragon's tail 0x01
 		*index_addr=0x00;
 	}
+	return true;
 }
