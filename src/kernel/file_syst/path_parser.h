@@ -12,6 +12,6 @@ struct path_body
 	char * path_content;
 	struct path_body* next;
 };
-struct path_head* path_llist_gen(const char** path);
+struct path_head* path_llist_gen(const char* path);
 void path_llist_free(struct path_head* head);
 #endif
