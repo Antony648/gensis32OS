@@ -13,6 +13,7 @@ extern void enable_interrupts();
 uint16_t* vedio=(uint16_t*)0x000b8000;
 uint16_t cursor_x=0;
 uint16_t cursor_y=0;
+uint8_t G_BOOT_DRIVE=0;	//for setting values for disk
 uint16_t text_mode_hex_gen(char letter,uint8_t fg,uint8_t bg,bool blink)
 {
 	uint16_t rtn_val=0x00;	//rtn_val is 0x00000000
@@ -69,6 +70,7 @@ void print_string_x_y(char*str,uint8_t x,uint8_t y,char color)
 		vedio[index]= simp_text_hex_gen(str[i],color);
 	}
 }
+
 void print(char * str)
 {
 	for(int i=0;str[i]!='\0';i++)
@@ -109,9 +111,17 @@ void print(char * str)
 		}
 	}
 }
-void kernel_main()
+void print_hex(uint8_t b)
 {
+	char *hex="0123456789abcdef";
+	char str[2]={hex[(b>>4)&0xf], hex[b & 0xf]};
+	print(str);
+}
+void kernel_main(uint8_t boot_drive)
+{
+	G_BOOT_DRIVE =boot_drive;
 	clear_screen();
+	print_hex(G_BOOT_DRIVE);
 	print("\t\tGENESIS-32 \nkernel loaded successfully.\n");
 	kheap_init();
 	
@@ -192,7 +202,7 @@ void kernel_main()
 	heap_cream_free(karray,p10);
 	heap_cream_free(karray,p11);
 	heap_cream_free(karray,p12);
-	
+	print_hex(G_BOOT_DRIVE);
 	//should give false, and message that we tried to free null
 	if(p7 && p13){}
 	

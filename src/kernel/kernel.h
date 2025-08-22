@@ -9,7 +9,7 @@ void print_string_x_y(char*str,uint8_t x,uint8_t y,char color);
 void print_x_y(char letter,uint8_t x,uint8_t y,char color);
 void print_string(char* str);
 void clear_screen();
-void kernel_main();
+void kernel_main(uint8_t boot_drive);
 
 
 #endif	

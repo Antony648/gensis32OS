@@ -26,7 +26,8 @@ volID				dd	0xd105
 volIDString			db	'GEN32  BOOT'
 sysIDString			db  'FAT16   '
 
-
+;fot separate use
+boot_disk			db 
 start:
 	cli
 	mov	ax,0x00
@@ -34,6 +35,7 @@ start:
 	mov	es,ax
 	mov	ss,ax
 	mov   	sp,0x7c00
+	mov		[boot_disk],dl
 	sti
 ;GDT
 load_gdt:
@@ -72,6 +74,16 @@ gdt_descriptor:
 	dd  gdt_null
 [BITS 32]
 protected_mode:
+;setup the descriptors
+	mov	ax,0x10
+	mov	ss,ax
+	mov	es,ax
+	mov	gs,ax
+	mov	fs,ax
+	mov 	ds,ax
+	mov 	ebp,0x200000
+	mov 	esp,ebp
+;done
 	mov 	ebx,1		;lba number	
 	mov 	ecx,100		;sector count
 ;setting es for es:di so that it can be evaluted well for insw and es selector points to second entry in GDT 
@@ -136,6 +148,7 @@ ata_lba_read:
 	dec	ecx
 	jnz	.call_read_sect
 
+	mov		dl,[boot_disk]
 jmp 	0x100000 	;jmps to location 1MiB in ram as cs is adready set
 	
 times 510-($-$$) db 0

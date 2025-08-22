@@ -4,6 +4,7 @@
 # include "../osconfig.h"
 # include "../error.h"
 struct disk disk1;
+struct disk* motherlobe[5]={NULL,NULL,NULL,NULL,NULL};
 int read_sect_disk(uint32_t lba, uint32_t total, void* buf)
 {
 		//lba contains starting lba number to read form
@@ -29,6 +30,7 @@ int read_sect_disk(uint32_t lba, uint32_t total, void* buf)
 }
 void disk_search_and_init()
 {
+	
 	memset(&disk1,0,sizeof(disk1));
 	disk1.type=DISK_TYPE_REAL;	
 	disk1.size=SECTOR_SIZE;
@@ -36,9 +38,8 @@ void disk_search_and_init()
 
 struct disk* get_disk(uint32_t index)
 {
-	if(index!=0)
-		return NULL;
-	return &disk1;
+	return motherlobe[index];
+	
 }
 
 int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)

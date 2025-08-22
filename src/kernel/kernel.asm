@@ -2,6 +2,7 @@
 global _start
 
 extern kernel_main
+
 global enable_interrupts
 _start:
 	mov	ax,0x10
@@ -10,9 +11,7 @@ _start:
 	mov	gs,ax
 	mov	fs,ax
 	mov 	ds,ax
-	mov 	ebp,0x200000
-	mov 	esp,ebp
-
+	
 	in	al,0x92
 	or	al,0x02
 	out	0x92,al
@@ -51,7 +50,10 @@ unmask_keyboard:
 	and 	al,0xfd
 	out	 	0x21,al
 	
+	movzx	eax,dl
+	push	eax
 	call	kernel_main
+	add		esp,4
 	jmp $
 
 enable_interrupts:
