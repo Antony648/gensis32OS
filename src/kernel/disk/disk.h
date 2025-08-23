@@ -15,6 +15,7 @@ enum FILE_SYST_TYPE
 	FAT_32,
 	EXT_2
 };
+
 struct partition
 {
 	struct disk* f_disk;
@@ -25,7 +26,20 @@ struct partition
 struct disk
 {
 	DISK_TYPE type;
-	uint32_t size;
+	uint32_t ata_code;
+	
+	
+	uint16_t base_data_port;
+	uint16_t control_port;
+	uint16_t command_status_port;
+	uint16_t head;
+	
+	uint8_t drive_head; //0xa0 or 0xb0
+	uint8_t is_master;
+	
+	uint32_t sect_size;
+	uint32_t sect_count;
+	
 	
 };
 void disk_search_and_init();
