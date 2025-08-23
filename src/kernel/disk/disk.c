@@ -7,7 +7,7 @@
 uintptr_t karray[5]={0,0,0,0,0};
 #include "./disk.h"
 #include "stdbool.h"
-extern G_BOOT_DRIVE;
+extern uint8_t G_BOOT_DRIVE;
 struct disk disk1;
 struct disk* motherlobe[5]={NULL,NULL,NULL,NULL,NULL};
 int read_sect_disk(uint32_t lba, uint32_t total, void* buf)
@@ -48,7 +48,7 @@ void set_disk_info(struct disk* diske)
 		base=0x170;
 	}
 		
-	control_port=base | 0b1000000110;
+	control_port=base + 206;
 	command_port=base+0x07;
 	head=base+0x6;
 	//status port command are one and same acts like status when we try to read , acts like command when we write
@@ -87,13 +87,20 @@ void get_disk_info(struct disk* diske,uint8_t command,uint16_t* buf)
 			asm volatile("nop");// wait for 400ns
 	
 	
-	
+	int k=ATA_WAIT;
 	while(inb(command_port)&0x80)
-	{}
+	{
+		if(--k==0)
+			return -TIMEOUT;
+	}
 	outb(command_port,(unsigned char)command);	//this will set the command
 	
+	k=ATA_WAIT;
 	while((inb(command_port) & 0x80) || !(inb(command_port)&0x08))
-	{}
+	{
+		if(--k==0)
+			return -TIMEOUT;
+	}
 	for(int i=0;i<256;i++)
 		buf[i]=in16(base);
 	
@@ -113,11 +120,27 @@ struct disk* check_disk(unsigned short ata_val)
 	for(int i=0;i<450;i++)
 		asm volatile ("nop");
 	
-	
-	while(inb(port_no) &0x80){}
+	int k=ATA_WAIT;
+	while(inb(port_no+7) &0x80)
+	{
+		if(k==0)
+			return -TIMEOUT
+		k--;
+	}
+	//
 	outb(port_no+7,0xec);
+	
 	//wait
-	while((inb(port_no+7) & 0x80) || !(inb(port_no+7)& 0x08)){}
+	for(int i=0;i<450;i++)
+		asm volatile ("nop");
+		
+	k=ATA_WAIT;	
+	while((inb(port_no+7) & 0x80) || !(inb(port_no+7)& 0x08))
+	{
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
 	
 	uint8_t status =inb(port_no +7);
 	while(!(status & 0x08))
@@ -150,7 +173,8 @@ void disk_search_and_init()
 	get_disk_info(&disk1,0xec,buf);
 	//should contain data in buffer at this point
 	disk1.sect_count=(uint32_t)(buf[61]<<16)|(uint32_t)buf[60];
-	disk1.sect_size=(uint32_t)(buf[118]<<16)|(uint32_t)buf[117];
+	//disk1.sect_size=(uint32_t)(buf[118]<<16)|(uint32_t)buf[117];
+	disk1.sect_size=512;
 	motherlobe[0]=&disk1;
 	//now we can set first entry of motherlobe
 	//scan of other three
@@ -164,7 +188,8 @@ void disk_search_and_init()
 			get_disk_info(val,0xec,buf);
 			//should contain value in buffer we can reuse buf
 			val->sect_count=(uint32_t)(buf[61]<<16)|(uint32_t)buf[60];
-			val->sect_size=(uint32_t)(buf[118]<<16)|(uint32_t)buf[117];
+			//val->sect_size=(uint32_t)(buf[118]<<16)|(uint32_t)buf[117];
+			val->sect_size=512;
 			motherlobe[index]=val;
 			index++;
 		}
@@ -187,7 +212,16 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 		outb(base+6,0xe0|((lba>>24)&0x0f));
 	else
 		outb(base+6,0xf0|((lba>>24)&0xf));
-	while(inb(base+7) & 0x80);
+		
+	int k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
 	//check 
 	outb(base+2,total&0xff);
 	
@@ -195,17 +229,45 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 	outb(base+4,((lba>>8)&0xff));
 	outb(base+5,((lba>>16)&0xff));
 	
+	k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
 	outb(base+7,0x20);	//code 0x20 means to read
+	
+	for(int i=0;i<450;i++)
+		asm volatile ("nop");
+	
+	k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
 	
 	
 	//here we are ready to accept data from data port
 	uint16_t *cur_start=(uint16_t*)buf;
 	for(int i=0;i<total;i++)
 	{
-		while((inb(base+7)&0x88)!=0x08){}
+		k=ATA_WAIT;
+		while((inb(base+7)&0x88)!=0x08)
+		{
+			if(k==0)
+				return -TIMEOUT;
+			k--;
+		}
 	
 		//check for errros
-		if(inb(base+7)&0x01 || inb(base+7)&0x02) 
+		if(inb(base+7)&0x01 || inb(base+7)&0x20) 
 			return DISK_READ_ERR;
 		for(int j=0;j<256;j++)
 		{

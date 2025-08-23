@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-
+#define ATA_WAIT 0x1000000
 typedef uint32_t DISK_TYPE;
 
 #define DISK_TYPE_REAL 0
