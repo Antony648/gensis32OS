@@ -40,15 +40,10 @@ void set_disk_info(struct disk* diske)
 	uint16_t ata_val=diske->ata_code;
 	unsigned short head,command_port,base,control_port,drive;
 	if(!(ata_val& 0x02))	//check for primary
-	{ 
-		diske->is_master=1;
 		base=0x1f0;
-	}
-	else
-	{
-		diske->is_master=0;
+	else	
 		base=0x170;
-	}
+	
 		
 	control_port=base + 0x206;
 	command_port=base+0x07;
@@ -59,7 +54,10 @@ void set_disk_info(struct disk* diske)
 		drive=0xa0;
 	else
 		drive=0xb0;
+	
 	diske->drive_head=drive;
+	if (!(drive &0x10)) diske->is_master=1;
+	else diske->is_master=0;
 	//by here all value will be set
 	diske->base_data_port=base;
 	diske->command_status_port=command_port;
@@ -80,8 +78,8 @@ void get_disk_info(struct disk* diske,uint8_t command,uint16_t* buf)
 	outb(control_port,0);
 	outb(head_port,(unsigned char)drive);	//sets up channel for communication
 	
-	for(int i=0;i<400;i++)
-			asm volatile("nop");// wait for 400ns
+	for(int i=0;i<4;i++)
+			inb(base+6);
 	
 	
 	int k=ATA_WAIT;
@@ -105,7 +103,7 @@ void get_disk_info(struct disk* diske,uint8_t command,uint16_t* buf)
 struct disk* check_disk(unsigned short ata_val)
 {
 	struct disk* rtn_val=NULL;
-	unsigned char port_no,drive;
+	uint16_t port_no,drive;
 	print("trying");
 	print_16(ata_val);
 	print("\n");
@@ -117,10 +115,17 @@ struct disk* check_disk(unsigned short ata_val)
 	outb(port_no+6,drive);	//setting communication channel
 	
 	//delay
-	for(int i=0;i<450;i++)
-		asm volatile ("nop");
+	for(int i=0;i<4;i++)
+		inb(port_no+6);
 	
 	print("communication set for"); print_16(ata_val);print("\n");
+	
+	uint8_t stat=inb(port_no+7);
+	if(stat ==0xff || stat==0x00)
+	{
+		print("no device \n"); return NULL;
+	}
+	
 	int k=ATA_WAIT;
 	while(inb(port_no+7) &0x80)
 	{
@@ -132,8 +137,8 @@ struct disk* check_disk(unsigned short ata_val)
 	outb(port_no+7,0xec);
 	print("info command send for"); print_16(ata_val);print("\n");
 	//wait
-	for(int i=0;i<450;i++)
-		asm volatile ("nop");
+	for(int i=0;i<4;i++)
+		inb(port_no+6);
 		
 	k=ATA_WAIT;	
 	while((inb(port_no+7) & 0x80) || !(inb(port_no+7)& 0x08))
@@ -299,7 +304,7 @@ void disk_debug_print()
 			print("control port:");print_16(motherlobe[i]->control_port);print("\n");
 			print("command/status port:");print_16(motherlobe[i]->command_status_port);print("\n");
 			print("head:");print_16(motherlobe[i]->head);print("\n");
-			print("drive head:");print_hex(motherlobe[i]->head);print("\n");
+			print("drive head:");print_hex(motherlobe[i]->drive_head);print("\n");
 			print("is master:");print_hex(motherlobe[i]->is_master);print("\n");
 			print("sector count:");print_32(motherlobe[i]->sect_count);print("\n");
 			print("sect size:");print_32(motherlobe[i]->sect_size);print("\n");
