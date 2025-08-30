@@ -1,8 +1,10 @@
 ORG		0x7c00
 [BITS 16]
-lba_save: dq 0x00
+lba_save: dd 0x00
 dl_val: db 0x00
 dap:	times 16 db 0x00
+fallback_rel equ fallback-0x1c00
+jmp_here_rel equ jmp_here-0x1c00
 start:
 	mov 	ax,0x00
 	mov		ss,ax
@@ -19,26 +21,34 @@ lba_setup:
 	mov		al,0x00
 	mov		[dap+0x01],al
 	mov		ax,1
-	mov		word ptr[dap+0x02],ax
-	mov		ax,0x000
-	mov		word ptr[dap+0x04],ax
-	mov		ax,0x0000
-	mov		word ptr[dap+0x08],0x0000
-	mov		
+	mov		word [dap+0x02],ax
+	mov		ax,0x7c00			;can be hard codes as i am planning to use lba access only for vbr
+	mov		word [dap+0x04],ax
+	mov		ax,0x00
+	mov		word [dap+0x06],ax
+	
+	lea		si,[lba_save]
+	lea		di,[dap+0x08]
+	mov		cx,0x04
+	cld
+	rep 	movsb
+	;dap+0xc to end is aldready 0x00	
+	mov		word [dap+0xc],0
+	mov		word [dap+0xe],0		
 	ret
 .error_lba:
 	jmp		$
 
 chs:
-;lba at bx
-	mov		[lba_save],bx
+;lba at lba_save
+	
 	mov		ah, 0x08
 	mov		dl, 0x80
 	int		0x13
 	jc		.error
 	
 	xor		ax,ax
-	mov		ax,dh
+	mov		al,dh
 	inc 	ax
 	and		cl,0x3f	;sector in cl
 	mul		cl
@@ -74,7 +84,7 @@ chs_end:
 
 ;we use chs for mbr copy  because it is not 8gb away..
 	
-	mov		bx,0		;mov lba number to bx
+	mov		dword [lba_save],0		;mov lba number to bx
 	call	chs
 	;we expect the values as per requriement
 	xor		ax,ax
@@ -85,17 +95,19 @@ chs_end:
 	mov		dl,[dl_val]
 	int		0x13
 ;end of copying mbr to 0x600
-jmp		$-0x1dfc	;0x1c00-4 because we want to jump to the very next instruction 
+jmp		jmp_here_rel	;0x1c00-4 because we want to jump to the very next instruction 
+jmp_here:
 					
 ;code for copying vbr to 0x7c00
 ;we try lba if fail we fallback to chs
-	mov		bx,1
+	mov		dword [lba_save],1	;for now we hardcode the value as we know
 lba_call:
 	call 	lba_setup
+	mov		si,dap
 	mov		ah,0x42
 	jmp  	call_act
 fallback:
-	mov		bx,1
+	mov		dword [lba_save],1
 	call   	chs		;still works because the code at 0x7c00 is not destroyed
 	mov		ah,2
 	xor		ax,ax	;es is aldready 0x00 but ...
@@ -106,10 +118,17 @@ call_act:
 	
 	mov		dl,[dl_val]
 	int		0x13
+	
+	jc		not_quite
+	jmp		0x000:0x7c00
 ;end of code for copying to 0x7c00
 
-	mov  dl,[dl_val]	;vbr expects it
-jmp		0x000:0x7c00
+	;mov  dl,[dl_val]	;vbr expects it
+	;far jump to vbr code
+not_quite:
+	jmp		0x00:fallback_rel
+
+	
 times 446-($-$$) db 0x00
 ;partition table begin
 entry1:
@@ -121,7 +140,7 @@ entry1:
 	endhead:		db 	0xff
 	endsect:		db  0xff
 	endcylind:		db	0xff
-	starlba:		dd  0x00000001
+	startlba:		dd  0x00000001
 	sizeinsect:		dd 	0x00773594
 entry2:
 	times 16 db 0x00

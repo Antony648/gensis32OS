@@ -299,15 +299,15 @@ void disk_debug_print()
 	for(int i=0 ;i<4;i++)
 		if(motherlobe[i]!=NULL)
 		{
-			print("ata_code:");print_32(motherlobe[i]->ata_code);print("\n");
-			print("base/data port:"); print_16(motherlobe[i]->base_data_port);print("\n");
-			print("control port:");print_16(motherlobe[i]->control_port);print("\n");
-			print("command/status port:");print_16(motherlobe[i]->command_status_port);print("\n");
-			print("head:");print_16(motherlobe[i]->head);print("\n");
-			print("drive head:");print_hex(motherlobe[i]->drive_head);print("\n");
-			print("is master:");print_hex(motherlobe[i]->is_master);print("\n");
-			print("sector count:");print_32(motherlobe[i]->sect_count);print("\n");
-			print("sect size:");print_32(motherlobe[i]->sect_size);print("\n");
+			print("ata_code:0x");print_32(motherlobe[i]->ata_code);print("\n");
+			print("base/data port:0x"); print_16(motherlobe[i]->base_data_port);print("\n");
+			print("control port:0x");print_16(motherlobe[i]->control_port);print("\n");
+			print("command/status port:0x");print_16(motherlobe[i]->command_status_port);print("\n");
+			print("head:0x");print_16(motherlobe[i]->head);print("\n");
+			print("drive head:0x");print_hex(motherlobe[i]->drive_head);print("\n");
+			print("is master:0x");print_hex(motherlobe[i]->is_master);print("\n");
+			print("sector count:0x");print_32(motherlobe[i]->sect_count);print("\n");
+			print("sect size:0x");print_32(motherlobe[i]->sect_size);print("\n");
 		}
 	
 }
