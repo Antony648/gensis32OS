@@ -84,7 +84,7 @@ protected_mode:
 	mov 	ebp,0x200000
 	mov 	esp,ebp
 ;done
-	mov 	ebx,1		;lba number	
+	mov 	ebx,2		;lba number	
 	mov 	ecx,100		;sector count
 ;setting es for es:di so that it can be evaluted well for insw and es selector points to second entry in GDT 
 	mov	ax,0x10

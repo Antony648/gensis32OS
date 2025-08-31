@@ -1,19 +1,21 @@
 ORG		0x7c00
-[BITS 16]
+bits	16
 lba_save: dd 0x00
 dl_val: db 0x00
 dap:	times 16 db 0x00
 fallback_rel equ fallback-0x1c00
 jmp_here_rel equ jmp_here-0x1c00
 start:
-	mov 	ax,0x00
+	xor		ax,ax
 	mov		ss,ax
 	mov		ds,ax
 	mov		es,ax
 	mov		sp,0x6000	;we are going to put stack before 0x6000
 	mov		[dl_val],dl
 	;so 0x6000 to 0x7c00 doesnot contian any data
+
 	jmp		chs_end
+	
 lba_setup:
 ;expects lba_save
 	mov		al,0x10
@@ -43,36 +45,33 @@ chs:
 ;lba at lba_save
 	
 	mov		ah, 0x08
-	mov		dl, 0x80
+	
 	int		0x13
 	jc		.error
 	
 	xor		ax,ax
-	mov		al,dh
-	inc 	ax
+	;inc		dh		;head+1 actual value in dh
+	mov		bl,dh		;haed in bl
 	and		cl,0x3f	;sector in cl
-	mul		cl
+	mov		ax,word [lba_save]
 	
-	;
-	mov		bx,[lba_save]
-	xchg	ax,bx
-	
-	xor 	dx,dx
+	xor 	ch,ch	
+	div		cx
+	inc		dx
+	mov		cl,dl	
+	;cl contains  lba%s+1 ax contains lba/s
+	xor		bh,bh
 	div		bx
-	mov		bx,ax	;bx contains cylinder
-	mov		ax,dx	;ax contains temp
-	div		cl		
-	;head in al
-	inc		ah
-	;sector in ah
+	;dx contains lba/s%h ax contains lab/s/h
 	
-	;set as param for int 0x13 ah=2 
-	mov		cl,ah
+	mov		ch,al
+	shl 	ah,6
 	and		cl,0x3f
-	mov		dh,al
-	mov		ch,bl
-	shl		bh,6
-	or		cl,bh
+	and		cl,ah
+	mov		dh,dl
+	
+	
+	
 	
 		
 	
@@ -85,8 +84,10 @@ chs_end:
 ;we use chs for mbr copy  because it is not 8gb away..
 	
 	mov		dword [lba_save],0		;mov lba number to bx
-	call	chs
+	;call	chs
 	;we expect the values as per requriement
+	xor		dh,dh
+	mov		cx,0x01			
 	xor		ax,ax
 	mov		es,ax
 	mov		bx,0x6000	;location to load mbr into
@@ -94,6 +95,7 @@ chs_end:
 	mov		ah,2	
 	mov		dl,[dl_val]
 	int		0x13
+	;jmp		$
 ;end of copying mbr to 0x600
 jmp		jmp_here_rel	;0x1c00-4 because we want to jump to the very next instruction 
 jmp_here:
