@@ -1,83 +1,112 @@
 #include "./partitions.h"
-#inlcude "../heap/heap_cream.h"
-//create karray
-uintptr_t karray[5]={0,0,0,0,0};		//so that we can use single disk resolution independently
+#include "../string/string.h"
+#include <stdbool.h>
+uintptr_t karray[5]={0,0,0,0,0};
 extern struct disk* motherlobe[5];
-struct partition* single_check_part(struct disk* disk_1,void* part_entry)
+
+bool check_mbr(uint8_t* partition_table)
 {
-	uint8_t* val=(uint8_t*)heap_cream_malloc(karray,16);
-	val=(uint_8*)part_entry;
-	
-	if(val[4] == 0x00)
+	if(!(partition_table[0]==0x80 || partition_table[0]==0x00))
+		return false;
+	switch((FILE_SYST_TYPE)partition_table[4])
 	{
-		heap_cream_free(karray,(void*)val);
-		return NULL;
-	}
-	struct partition* j=heap_cream_malloc(karray,sizeof(struct partition));
-	j->next=NULL;
-	if(val[0]==0x80)
-		j->is_bootable=1;
-	else
-		j->is_bootable=0;
-	
-	j->fs_type=val[0x04];
 		
-	uint32_t* val_32=NULL;
-	val_32=(uint32_t*)val[0x08];
-	
-	j->start_sect=val[0];
-	j->sect_num=val[1];
-	j->f_disk=disk_1;
-	
-	heap_cream_free(karray,(void*)val);
-	return j;
+		case FAT_12:
+		case FAT_16_L32:
+		case FAT_16_G32:
+		case FAT_16_LBA:
+		case FAT_32_LBA:
+		case LINUX_NATIVE:
+			return true;
+		default:
+			return false;
+	}
 }
-struct partition* check_part(struct disk* disk_1, void* part_table)
+void fix_vbr(void* sect_0_buf,struct partition* head)
 {
-	void* vale=NULL;
-	uint8_t* helper=(uint8_t*)part_table;
-	struct partition* head=single_check_part(disk_1,part_table);	//this will fill the head with the first entry we 
-	//are certian all disks have at least a parition
-	if(!head)
-		return NULL;		//blank disk no partitions
 	
-	struct partition* last= NULL;
-	head=last;
-	for(int i=1;i<4;i++)
+	
+	const char* s1=(const char*)sect_0_buf+0x63;
+	if(!strncmp(s1,"FAT12 ",6))
+		head->fs_type=FAT_12;
+	else if(!strncmp(s1,"FAT16 ",6))
+		head->fs_type=FAT_16_LBA;
+	else if(!strncmp(s1,"FAT32 ",6))
+		head->fs_type=FAT_32_LBA;
+	else
+		head->fs_type=FS_UNKOWN;
+}
+struct partition* create_linked_list(struct disk disk1,void* sect_0_buf,uint8_t* partition_table)
+{
+	//analyse partition table generates a linked list and sends it 
+	struct partition* head=NULL;
+	if(!check_mbr(partition_table))
 	{
-		vale=single_check_part(disk_1,(void*)helper[i*16]);
-		if(!vale)
-			continue;
-		last->next=vale;
-		last=vale;
-		
+		//code for vbr
+		head=heap_cream_malloc(karray,sizeof(struct partition));
+		fix_vbr(sect_0_buf,head);
+		head->is_bootable=1;
+		head->f_disk=disk1;
+		head->next=NULL;
+		return head;
 	}
+	//code for first entry
+	struct partition* last=NULL;
+	struct partition* cur=NULL;
+	for(int i=0;i<4;i++)
+	{
+		partition_table=partition_table+(16*i);
+		
+		uint32_t *val=(uint32_t*)(partition_table+8);
+		if(val[1]==0x00)	// 0 sector count means no entry 
+			continue;
+		
+		cur=heap_cream_malloc(karray,sizeof(struct partition));
+		if(partition_table[0]==0x80)
+			cur->is_bootable=1;
+		else
+			cur->is_bootable=0;
+		cur->fs_type=partition_table[4];
+		
+		cur->f_disk=disk1;
+		cur->start_sect=val[0];
+		cur->sect_num=val[1];
+		cur->next=NULL;
+		if(!head)
+			head=cur;
+		if(last==NULL)
+			last=cur;
+		else
+		{
+			last->next=cur;
+			last=cur;
+		}
+	}	
 	return head;
 }
-void disk_partition_scanner(struct disk* disk_1)
+void single_disk_scan(struct disk* disk_1)
 {
-	
-	
-	//create a linkelist start pointer set ti to NULL
-	void* buffer= heap_cream_malloc(karray,512);
-	//create buffer
-	read_disk_block(disk_1,0, 1, buffer);
-	//use disk to functions to load data in buffer
-	uint8_t* k=(uint_8*)buffer;
-	
-	disk_1.link_list=check_part(disk_1,(void*)k[446]);
-	// read data as 16 byte chunks from byte 446 to 510
-	//analyse 16 bytes if it is a recognised fs then create add it to linked list
-	//repeat process for all four chunks and return linked list start address
-	heap_cream_free(karray,buffer);
+	//assingns the linked list structure with a linked list of partition structures
+	void *sect_0_buf=heap_cream_malloc(karray,512);
+	if(read_disk_block(disk_1,0, 1, sect_0_buf) < 0)
+		goto exit_here;
+	uint8_t* byte=(uint8_t*)sect_0_buf;
+	if(byte[510]!=0x55 || byte[511]!=0xaa) 		//not an mbr or vbr
+		goto exit_here;
+	disk_1->link_list=create_linked_list(disk_1,sect_0_buf,byte+445);
+exit_here:
+
+	heap_cream_free(karray,sect_0_buf);
+	return;
 }
 void scan_part_all_disks()
 {
-	heap_cream_init(karray);
+	//scans motherlobe and fills the link_list field of the disk
 	for(int i=0;i<5;i++)
 	{
-		if(motherlobe[i]!=NULL)
-			disk_partition_scanner(motherlobe[i]);
+		if(!motherlobe[i])
+			continue;
+		else
+			single_disk_scan(motherlobe[i]);
 	}
 }
-

@@ -11,6 +11,6 @@ struct partition
 	uint8_t is_bootable;
 	struct partition* next;
 };
-struct partition* disk_partition_scanner(struct disk*);
+void single_disk_scan(struct disk* disk_1);
 void scan_part_all_disks();
 #endif
