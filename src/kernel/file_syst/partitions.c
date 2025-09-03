@@ -51,6 +51,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 	if(!check_mbr(partition_table))
 	{
 		//code for vbr
+		print("we have vbr\n");
 		head=heap_cream_malloc(karray2,sizeof(struct partition));
 		fix_vbr(sect_0_buf,head);
 		head->is_bootable=0;
@@ -60,6 +61,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 		return head;
 	}
 	//code for first entry
+	
 	struct partition* last=NULL;
 	struct partition* cur=NULL;
 	uint32_t s_c_local;
@@ -113,6 +115,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 		cur->next=NULL;
 		if(cur->start_sect + cur->sect_num > cur->f_disk->sect_count)
 		{
+			print("corrupted\n");
 			heap_cream_free(karray2,cur);continue; 
 		}
 		
@@ -141,7 +144,9 @@ void single_disk_scan(struct disk* disk_1)
 	uint8_t* byte=(uint8_t*)sect_0_buf;
 	if(byte[510]!=0x55 || byte[511]!=0xaa) 		//not an mbr or vbr
 		goto exit_here;
+	print("create a linked list\n");
 	disk_1->link_list=create_linked_list(disk_1,sect_0_buf,byte+446);
+	
 exit_here:
 
 	heap_cream_free(karray2,sect_0_buf);
@@ -155,13 +160,18 @@ void scan_part_all_disks()
 		if(!motherlobe[i])
 			continue;
 		else
+		{
 			single_disk_scan(motherlobe[i]);
+		}
 	}
 }
 static void print_link_list(struct disk* disk1)
 {
 	if(disk1->link_list==NULL)
-		return;
+	{
+		print("no linked list");
+		return;	
+	}
 	struct partition* cur=disk1->link_list;
 	while(cur)
 	{

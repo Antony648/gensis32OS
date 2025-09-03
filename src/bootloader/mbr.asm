@@ -158,7 +158,7 @@ entry1:
 	endsect:		db  0xff
 	endcylind:		db	0xff
 	startlba:		dd  0x00000001
-	sizeinsect:		dd 	0x00773594
+	sizeinsect:		dd 	0x00008040
 entry2:
 	times 16 db 0x00
 entry3:
