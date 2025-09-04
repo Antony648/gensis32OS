@@ -160,16 +160,14 @@ void scan_part_all_disks()
 		if(!motherlobe[i])
 			continue;
 		else
-		{
 			single_disk_scan(motherlobe[i]);
-		}
 	}
 }
 static void print_link_list(struct disk* disk1)
 {
 	if(disk1->link_list==NULL)
 	{
-		print("no linked list");
+		print("no linked list\n");
 		return;	
 	}
 	struct partition* cur=disk1->link_list;
@@ -178,25 +176,29 @@ static void print_link_list(struct disk* disk1)
 		switch(cur->fs_type)
 		{
 			case FAT_12:
-				print("fat12\n");
+				print("fat12:");
 				break;
 			case FAT_16_L32:
 			case FAT_16_G32:
 			case FAT_16_LBA:
-				print("fat16\n");
+				print("fat16:");
 				break;
 			case FAT_32_LBA:
 			case FAT_32_CHS:
-				print("fat32\n");
+				print("fat32:");
 				break;
 			case LINUX_NATIVE:
-				print("linux native\n");
+				print("linux native:");
 				break;
 				
 			default:
-				print("file system unknown\n");
+				print("file system unknown:");
 				break;
 		}
+		if(cur->is_bootable)
+			print("bootable\n");
+		else
+			print("non bootable\n");
 		cur=cur->next;
 	}
 }
@@ -207,6 +209,11 @@ void partition_debug()
 		if(!motherlobe[i])
 			continue;
 		else
+		{
+			print("diskno:");
+			print_32(i);
+			print("\n");
 			print_link_list(motherlobe[i]);
+		}
 	}
 }
