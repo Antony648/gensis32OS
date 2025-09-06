@@ -312,3 +312,9 @@ void disk_debug_print()
 		}
 	
 }
+
+void destroy_disk_info()
+{
+//destroys all disk info an page can be reclamed by ram
+	heap_cream_destroy(karray);
+}

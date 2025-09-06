@@ -36,10 +36,12 @@ int strnlen(const char* str,int n)
 }
 int strncmp(const char* s1,const char* s2,size_t n)
 {
-	for(;n && (*s1 || *s2);n--,s1++,s2++)
+	for(;n ;n--,s1++,s2++)
 	{
 		if(*s1!=*s2)
-			return (int)(*s1 -*s2);
+			return (int)((unsigned char)*s1 -(unsigned char)*s2);
+		else if(*s1=='\0')
+			return 0;
 	}
 	return 0;
 }

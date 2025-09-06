@@ -217,3 +217,9 @@ void partition_debug()
 		}
 	}
 }
+
+void seek_and_destroy()
+{
+	//destroys all partition table structures and ram can reclaim the memory.
+	heap_cream_destroy(karray2);
+}

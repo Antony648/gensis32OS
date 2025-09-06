@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "../date_time/date_time.h"
 #define NAME_MAX 225	
+#define MAX_MOUNT 32
 enum FILE_TYPE
 {
 	DATA_FILE,
@@ -11,6 +12,8 @@ enum FILE_TYPE
 	SYMLINK,
 	HRDLINK,
 	DEVICE_FILE,
+	HIDDEN_FILE,
+	SYSTEM_FILE,
 };
 enum PERMISSIONS
 {

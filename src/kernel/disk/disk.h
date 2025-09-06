@@ -47,4 +47,5 @@ void disk_search_and_init();
 struct disk* get_disk(uint32_t index);
 int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf);
 void disk_debug_print();
+void destroy_disk_info();
 #endif

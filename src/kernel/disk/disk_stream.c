@@ -2,6 +2,7 @@
 #include "../heap/kheap.h"
 #include "../osconfig.h"
 #include "../kernel.h"
+#include <stdint.h>
 
 /*
 int read_single_sect_disk(uint32_t lba, void* buf)

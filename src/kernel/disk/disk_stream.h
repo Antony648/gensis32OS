@@ -1,6 +1,7 @@
 #ifndef DISKSTREAM_H
 #define DISKSTREAM_H
 #include "disk.h"
+#include <stdint.h>
 
 struct disk_stream
 {
