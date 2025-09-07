@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include "../date_time/date_time.h"
 #define NAME_MAX 32	
+#define PATH_MAX 64
 #define MAX_MOUNT 32
+#define MAX_FILE_COUNT 128
 enum FILE_TYPE
 {
 	DATA_FILE,
@@ -32,9 +34,16 @@ struct file_desc; 	//forward decclaration
 struct mount_point_ent
 {
 	struct file_desc* root;		//subdirectory that is going to be mounted
-	const char* path;					//path in currently mounted directory where we mount the subdirectory
+	char path[PATH_MAX];					//path in currently mounted directory where we mount the subdirectory
 	struct partition* partition;
 	struct disk* disk;		
+};
+struct open_file_table_ent
+{
+	uint32_t offset;
+	enum PERMISSIONS mode;
+	struct file_desc* file_desc;
+	uint32_t refcount;
 };
 struct file_operations
 {
@@ -68,8 +77,13 @@ struct file_desc
 	struct file_desc* parent;
 	struct file_desc* first_child;
 	struct file_desc* sibling;
-	uint32_t refcount;
+	
 };
+struct file_operations* big_brother;	//this is going to be the common file ops used by virtual filesystem right now...
+struct open_file_table_ent* open_file_table[MAX_FILE_COUNT];	//open file table....
 struct partition* detect_native_part();
 struct mount_point_ent* get_mount_point(const char* path);
+void init_mindflayer();
+void init_open_file_table();
+int mount(const char* path,struct partition* partition);
 #endif

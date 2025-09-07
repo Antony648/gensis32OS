@@ -37,8 +37,13 @@ struct path_head* path_llist_gen(const char* target)
 		return NULL;
 	int j=0;
 	//we can create a head at this point
+	struct mount_point_ent* goku=NULL;
+	goku=get_mount_point(target);	//could not get mount point means invalid
+
+	if(!goku)
+		return NULL;
 	struct path_head* head=(struct path_head*)heap_cream_malloc(karray_pp,sizeof(struct path_head));
-	head->mnt_pnt=mindflayer[0];	//always main mount for full path
+	head->mnt_pnt=goku;
 	if( target[1]=='\0')
 	{
 		head->first=NULL;

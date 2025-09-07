@@ -14,5 +14,5 @@ struct partition
 void single_disk_scan(struct disk* disk_1);
 void scan_part_all_disks();
 void partition_debug();
-void seek_and_destroy();
+//void seek_and_destroy();
 #endif

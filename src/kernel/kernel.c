@@ -153,7 +153,6 @@ void kernel_main(uint8_t boot_drive)
 	print("kernel heap setup initalized....\n");
 	
 	
-	
 	idt_init();
 	print("interrupt table loaded .....\n");
 	
@@ -169,6 +168,9 @@ void kernel_main(uint8_t boot_drive)
 	
 	enable_paging();
 	print("paging enabled...\n");
+
+	help_me_mary_mother_of_god();
+	
 	
 	print("searching for disks....\n");
 	disk_search_and_init();

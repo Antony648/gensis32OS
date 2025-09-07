@@ -1,14 +1,24 @@
 #include "heap_cream.h"
 #include "heap32.h"
 #include "../kernel.h"
+
+#include "kheap.h"
+#include <stdint.h>
+uintptr_t* mothermary;
+
+void help_me_mary_mother_of_god()
+{
+	mothermary=kzalloc(1);
+}
 void heap_cream_init(uintptr_t* karray)
 {
 	for(int i=0;i<MAX_4KB_HEAP;i++)
 		karray[i]=0;
 }
 
-void* heap_cream_malloc(uintptr_t* karray,size_t size)
+void* heap_cream_malloc(size_t size)
 {
+	uintptr_t* karray=mothermary;
 	//uint32_t* karray=*karray_addr;
 	if(size >TOTAL_BYTES_AVAIL)
 	{
@@ -41,8 +51,9 @@ void* heap_cream_malloc(uintptr_t* karray,size_t size)
 }
 
 
-static void heap_cream_kill(uintptr_t* karray,int index)
+static void heap_cream_kill(int index)
 {
+	uintptr_t* karray=mothermary;
 	kfree((void*)karray[index]);karray[index]=0;
 }
 
@@ -64,8 +75,9 @@ static void heap_cream_kill(uintptr_t* karray,int index)
 		}
 	}
 }*/
-static void heap_cream_single_chk_kill(uintptr_t *karray,int index)
+static void heap_cream_single_chk_kill(int index)
 {
+	uintptr_t* karray=mothermary;
 	uint8_t* table=(uint8_t*)karray[index];
 			int j;
 			for(j=0;j<124;j++)
@@ -74,11 +86,12 @@ static void heap_cream_single_chk_kill(uintptr_t *karray,int index)
 					break;
 			}
 			if(j==124)
-				heap_cream_kill(karray,index);
+				heap_cream_kill(index);
 }
 
-bool heap_cream_free(uintptr_t* karray,void* ptr)
+bool heap_cream_free(void* ptr)
 {
+	uintptr_t* karray=mothermary;
 		//we need to find which page block we have it
 	if(ptr==NULL)
 	{
@@ -97,7 +110,7 @@ bool heap_cream_free(uintptr_t* karray,void* ptr)
 			if(heap32_free((void*)karray[i],ptr))
 			{
 				//if we successfully freed the memory, we can now possibly free the page too...
-				heap_cream_single_chk_kill(karray,i); 
+				heap_cream_single_chk_kill(i); 
 				
 				return true;
 			}

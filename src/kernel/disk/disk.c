@@ -6,7 +6,7 @@
 # include "../heap/heap_cream.h"
 # include "../time/time.h"
 # include "../kernel.h"
-uintptr_t karray[5]={0,0,0,0,0};
+#include <stdint.h>
 
 #include "stdbool.h"
 extern uint8_t G_BOOT_DRIVE;
@@ -164,7 +164,7 @@ struct disk* check_disk(unsigned short ata_val)
 	if(status & 0x08)
 	{
 		print("detected one more disk...\n");
-		rtn_val=(struct disk*)heap_cream_malloc(karray,sizeof(struct disk));
+		rtn_val=(struct disk*)heap_cream_malloc(sizeof(struct disk));
 		rtn_val->ata_code=ata_val;
 		rtn_val->type=DISK_TYPE_REAL;
 	}
@@ -181,7 +181,7 @@ void disk_search_and_init()
 	disk1.ata_code=G_BOOT_DRIVE;
 	
 	//get size from our disk
-	uint16_t* buf=heap_cream_malloc(karray,512);
+	uint16_t* buf=heap_cream_malloc(512);
 	set_disk_info(&disk1);
 	get_disk_info(&disk1,0xec,buf);
 	//should contain data in buffer at this point
@@ -207,7 +207,7 @@ void disk_search_and_init()
 			index++;
 		}
 	}
-	heap_cream_free(karray,buf);
+	heap_cream_free(buf);
 	//motherlobe should contain possible disks as entries
 }
 	
@@ -313,8 +313,3 @@ void disk_debug_print()
 	
 }
 
-void destroy_disk_info()
-{
-//destroys all disk info an page can be reclamed by ram
-	heap_cream_destroy(karray);
-}

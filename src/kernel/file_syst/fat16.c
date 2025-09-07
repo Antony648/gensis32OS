@@ -8,6 +8,7 @@
 
 
 uintptr_t karray_fat_16[5]={0,0,0,0,0};
+
 static void decode_datetime(struct vfs_timestamp* vfs, uint16_t date,uint16_t time)
 {
 	vfs->vfs_date.day=date & 0x1f; //lower 5 bits
@@ -41,6 +42,7 @@ static void fat16tovfs(struct file_desc* fd,struct fat_16_root_dir_ent* dr)
 	fd->ops=(const struct file_operations*)&fat16_fops;
 
 }
+
 int fat16_open(struct file_desc* file)
 {
 	return 0;
@@ -57,9 +59,29 @@ int fat16_write(struct file_desc* file,uint32_t offset,uint32_t len,char* buffer
 {
 	return 0;
 }
-struct file_desc* get_root_fat16(struct partition* partition)
+
+struct file_desc* get_root_fat16(struct partition *partition)
 {
-	//gets the file descriptor of a root partition using direct access
+	//the job is to create a fake file descriptor for root
+	
+	struct file_desc* rtn_val=heap_cream_malloc(karray_fat_16, sizeof(struct file_desc));
+	rtn_val->type=SUB_DIR;
+	rtn_val->fs_hook=NULL;
+	rtn_val->file_id=0;
+	strncpy(rtn_val->name, "/\0",2);
+	rtn_val->parent=NULL;
+	rtn_val->sibling=NULL;
+	rtn_val->mnt_pnt=NULL; 
+	rtn_val->ops=(const struct file_operations*)&fat16_fops;
+	//the ways of reconginsing if a file descriptor is root is id=0 and if it is a mount point is mnt_pnt=NULL
+	return rtn_val;
+
+}
+
+struct file_desc* get_root_child(struct partition* partition,char* name,char* extension)
+{
+	//gets the file descriptor of an immediate child of a root,
+
 	struct disk_stream* ds=init_disk_stream(partition->f_disk);
 	uint16_t res_sect,sect_per_fat,bytes_per_sect,rootentcount;
 	uint8_t fat_copies;
@@ -81,21 +103,41 @@ struct file_desc* get_root_fat16(struct partition* partition)
 	get_bytes_from_disk(ds, 2, 	(uint8_t*)&sect_per_fat);
 
 	//calculate the offset in disk where we can get data
+
 	uint32_t root_dir_sect= res_sect +(fat_copies*sect_per_fat);
 	root_dir_sect*= bytes_per_sect;	
 
 	//start of root dir sector in bytes or in other words offset in disk 
 	//that has first  file's file_descriptor
+
 	struct fat_16_root_dir_ent* first_fat16_ent=heap_cream_malloc(karray_fat_16,sizeof(struct fat_16_root_dir_ent));
-	disk_stream_seek(ds, root_dir_sect);
-	get_bytes_from_disk(ds, 32,(uint8_t*)first_fat16_ent);
+	struct file_desc* fat16_root=NULL;
+	//scan all root entries to find the child
+
+	uint8_t i=0;
+	for(;i<rootentcount;i++)
+	{
+		disk_stream_seek(ds, root_dir_sect+(i*32));
+		get_bytes_from_disk(ds, 32,(uint8_t*)first_fat16_ent);
+
+		if(strlen(name)==strlen(first_fat16_ent->name))
+			if(!strncmp(name, first_fat16_ent->name, strlen(name)) && !strncmp(extension, first_fat16_ent->extension,3))
+				{
+					fat16_root=heap_cream_malloc(karray_fat_16, sizeof(struct file_desc));
+					fat16tovfs(fat16_root, first_fat16_ent);
+					break;
+				}
+
+	}
+
 
 	free_disk_stream(ds);
-	struct file_desc* fat16_root=heap_cream_malloc(karray_fat_16, sizeof(struct file_desc));
+
+	
 
 	//we have file desc struct and root dir ent for first file
 
-	fat16tovfs(fat16_root, first_fat16_ent);
+	
 	heap_cream_free(karray_fat_16 ,(void*)first_fat16_ent);
 
 	return  fat16_root;

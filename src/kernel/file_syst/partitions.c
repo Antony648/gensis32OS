@@ -1,9 +1,11 @@
 #include "./partitions.h"
 #include "../string/string.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include "../kernel.h"
 #include "../heap/heap_cream.h"
-uintptr_t karray2[5]={0,0,0,0,0};
+
+
 extern struct disk* motherlobe[5];
 static uint32_t get32(const uint8_t* ptr)
 {
@@ -52,7 +54,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 	{
 		//code for vbr
 		print("we have vbr\n");
-		head=heap_cream_malloc(karray2,sizeof(struct partition));
+		head=heap_cream_malloc(sizeof(struct partition));
 		fix_vbr(sect_0_buf,head);
 		head->is_bootable=0;
 		head->f_disk=disk1;
@@ -76,7 +78,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 		if(s_c_local==0x00)	// 0 sector count means no entry 
 			continue;
 		
-		cur=heap_cream_malloc(karray2,sizeof(struct partition));
+		cur=heap_cream_malloc(sizeof(struct partition));
 		if(loop_var[0]==0x80)
 			cur->is_bootable=1;
 		else
@@ -116,7 +118,7 @@ static struct partition* create_linked_list(struct disk* disk1,void* sect_0_buf,
 		if(cur->start_sect + cur->sect_num > cur->f_disk->sect_count)
 		{
 			print("corrupted\n");
-			heap_cream_free(karray2,cur);continue; 
+			heap_cream_free(cur);continue; 
 		}
 		
 		if(!head)
@@ -138,7 +140,7 @@ void single_disk_scan(struct disk* disk_1)
 	if(disk_1==NULL)
 		return;
 	disk_1->link_list=NULL;
-	void *sect_0_buf=heap_cream_malloc(karray2,512);
+	void *sect_0_buf=heap_cream_malloc(512);
 	if(read_disk_block(disk_1,0, 1, sect_0_buf) < 0)
 		goto exit_here;
 	uint8_t* byte=(uint8_t*)sect_0_buf;
@@ -149,7 +151,7 @@ void single_disk_scan(struct disk* disk_1)
 	
 exit_here:
 
-	heap_cream_free(karray2,sect_0_buf);
+	heap_cream_free(sect_0_buf);
 	return;
 }
 void scan_part_all_disks()
@@ -218,8 +220,3 @@ void partition_debug()
 	}
 }
 
-void seek_and_destroy()
-{
-	//destroys all partition table structures and ram can reclaim the memory.
-	heap_cream_destroy(karray2);
-}

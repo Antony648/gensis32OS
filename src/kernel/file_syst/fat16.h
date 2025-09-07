@@ -38,4 +38,4 @@ const struct file_operations fat16_fops=
 };
 #endif
 struct file_desc* get_root_fat16(struct partition* partition);
-struct file_desc* get_root_child(struct partition* partition);
+struct file_desc* get_root_child(struct partition* partition,char* name,char* extension);
