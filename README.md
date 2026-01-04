@@ -14,3 +14,12 @@ some rudimentary and initial functionalities are created by taking inspiration f
     heap implementation with a slab allocator(additional)
     two level paging
     disk management
+
+#build
+    run command
+    bash env_var_setup.sh
+
+#run
+    the operating system currently runs in qemu 
+    so before running the following command make sure qemu is installed and functional
+    bash run_sim.sh 
