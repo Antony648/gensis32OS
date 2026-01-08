@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#define MAX_4KB_HEAP  1024 //1024 is max 
+#define MAX_4KB_HEAP  124 //124 is max , 3968/32=124
 void help_me_mary_mother_of_god();
 //void heap_cream_init(uintptr_t* karray);
 void* heap_cream_malloc(size_t size);
