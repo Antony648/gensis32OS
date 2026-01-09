@@ -4,6 +4,7 @@ struct block_device
 {
     struct partition* partition_ptr;
     //int (*read)(int )
-    srurct block_device* next;
+    struct  block_device* next;
 };
+void generate_block_devices();
 #endif
