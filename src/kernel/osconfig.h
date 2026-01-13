@@ -12,4 +12,7 @@
 #define KHEAP_BLOCK_SIZE		4096
 #define KHEAP_BLOCK_SHIFT		12
 #define SECTOR_SIZE				512
+#define MAX_OPEN_FILE_COUNT		250
+#define FILE_NAME_LEN_MAX 		20
+#define FS_MOUNTS_MAX			5
 #endif

@@ -28,6 +28,8 @@ sysIDString			db  'FAT16   '
 
 ;fot separate use
 boot_disk			db 
+root_disk			db 0x81		;bootloader assumes root at disk 0x81
+root_part			db 0x00 	;bootloader assumes rootfs at first partition of disk ata 0x81
 start:
 	cli
 	mov	ax,0x00
