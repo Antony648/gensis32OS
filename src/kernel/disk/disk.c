@@ -11,7 +11,7 @@
 #include "stdbool.h"
 extern uint8_t G_BOOT_DRIVE;
 struct disk disk1;
-struct disk* motherlobe[5]={NULL,NULL,NULL,NULL,NULL};
+struct disk* motherlobe[DISK_SUPPORT_MAX]={NULL,NULL,NULL,NULL,NULL};
 /*int read_sect_disk(uint32_t lba, uint32_t total, void* buf)
 {
 		//lba contains starting lba number to read form

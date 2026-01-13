@@ -8,14 +8,17 @@
 #define file_read 0x1
 #define file_write 0x2
 #define file_exec 0x4
-
+#define CTE_MOUNT_PNT   0x0111
+#define CTE_FILE        0x0101
+#define CTE_DIR         0x0010
 struct cache_table_entry{
 
     struct cache_table_entry* parent;
     char name[FILE_NAME_LEN_MAX];
     void* target;   //it generally points to a vfs_node struct 
     //but can also point to a mount_table_entry
-    uint32_t refcount;
+    uint16_t refcount;
+    uint16_t flags;
 
 
 };  //size  32 bytes
@@ -31,7 +34,6 @@ struct mount_table_entry{
     struct partition* mnt_part;
     struct vfs_node* fs_root_node;
 
-
 };
 
 #define BYTE    b'1'
@@ -46,6 +48,7 @@ struct vfs_node{
     uint32_t fs_specific;
 
 };
+
 struct file* vfs_open(char* path);
 int (*vfs_write)(struct file* file_ptr,char* buffer,uint32_t size);
 int (*vfs_read)(struct file* file_ptr,char* buffer,uint32_t size);

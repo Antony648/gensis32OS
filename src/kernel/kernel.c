@@ -1,6 +1,7 @@
 #include "kernel.h"
 #include "./idt/idt.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include "./io/io.h"
 #include "./pit/pit.h"
 #include "./heap/kheap.h"
@@ -17,6 +18,8 @@ uint16_t* vedio=(uint16_t*)0x000b8000;
 uint16_t cursor_x=0;
 uint16_t cursor_y=0;
 uint8_t G_BOOT_DRIVE=0;	//for setting values for disk
+uint8_t G_ROOT_DRIVE=0;	//for filesystem root
+uint8_t G_ROOT_PART=0;	//FOR filesystem root
 uint16_t text_mode_hex_gen(char letter,uint8_t fg,uint8_t bg,bool blink)
 {
 	uint16_t rtn_val=0x00;	//rtn_val is 0x00000000
@@ -83,11 +86,11 @@ void print(char * str)
 			case '\n':
 				if(cursor_y<24)
 						cursor_y++;
-					else
-					{
-						scroll1();
-						//cursor_y
-					}
+				else
+				{
+					scroll1();
+					//cursor_y
+				}
 				cursor_x=0;
 				break;
 			case '\t':
@@ -141,9 +144,11 @@ void print_64(uint64_t val)
 	print_32((uint32_t)((val>>32)&0xffffffff));
 	print_32((uint32_t)(val & 0xffffffff));
 }
-void kernel_main(uint8_t boot_drive)
+void kernel_main(uint8_t boot_drive,uint8_t root_drive,uint8_t root_partitions)
 {
 	G_BOOT_DRIVE =boot_drive;
+	G_ROOT_DRIVE=root_drive;
+	G_ROOT_PART=root_partitions;
 	clear_screen();
 	
 	print("\t\tGENESIS-32 \nkernel loaded successfully.\n");
@@ -186,6 +191,8 @@ void kernel_main(uint8_t boot_drive)
 	
 	enable_interrupts();
 	print("interrupts enabled....\n");
+
+	
 	
 	
 	

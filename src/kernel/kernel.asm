@@ -5,6 +5,7 @@ extern kernel_main
 
 global enable_interrupts
 _start:
+	
 	mov	ax,0x10
 	mov	ss,ax
 	mov	es,ax
@@ -51,10 +52,17 @@ unmask_keyboard_pit:
 	out	 	0x21,al
 	
 	cli
+	mov 	eax,0x01
+	push	eax
+
+	mov 	eax,0x81
+	push 	eax
+
 	movzx	eax,dl
 	push	eax
+
 	call	kernel_main
-	add		esp,4
+	add		esp,12
 	jmp $
 
 enable_interrupts:
