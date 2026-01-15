@@ -1,5 +1,11 @@
 #include "essentials.h"
 
+size_t get_str_len(char* src)
+{
+	size_t i;
+	for(i=0;src[i] && i<99999;i++);
+	return i;
+}
 void* memset(void* s, int c, size_t n)
 {
 	uint8_t* s1=(uint8_t*)s;
