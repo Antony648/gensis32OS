@@ -104,4 +104,5 @@ clean:
 	rm -rf $(BUILD_DIR)/kernel/pit/*
 	rm -rf $(BUILD_DIR)/kernel/time/*
 	rm -rf $(BUILD_DIR)/kernel/file_syst/*
+	rm -rf $(BUILD_DIR)/final/*
 	find $(BUILD_DIR)/kernel/ -maxdepth 1 -type f -delete 
