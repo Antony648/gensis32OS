@@ -5,7 +5,9 @@
 #include <stdint.h>
 #include <string.h>
 #include "../error.h"
+#include "hash.h"
 #include "../essentials/essentials.h"
+#include "../kernel.h"
 extern struct mount_table_entry* general;
 extern uint32_t VFS_INODE_ID_COUNT;
 extern uint32_t CACHE_TABLE_COUNT;
@@ -63,6 +65,15 @@ fail:
 int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
 {
 
+	uint64_t hash_value=generate_hash(path);
+	for(int i=0;i<=CACHE_TABLE_COUNT;i++)
+	{
+		if(CACHE_TABLE[CACHE_TABLE_COUNT].path_hash==hash_value)
+		{
+			print("trying to mount on existing path\n");
+			goto fail;
+		}
+	}
 	struct mount_table_entry* mnt_tbl_e=NULL;
 	mnt_tbl_e=heap_cream_malloc(sizeof(struct mount_table_entry));
 	if(!mnt_tbl_e)
@@ -96,8 +107,9 @@ int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
 	//ct
 	CACHE_TABLE_COUNT++;
 	CACHE_TABLE[CACHE_TABLE_COUNT].refcount=1;
-	CACHE_TABLE[CACHE_TABLE_COUNT].target=mnt_tbl_e;	//cachetableentry points to  mounttableentry which has vfsnodeptr
-	memcpy(CACHE_TABLE[CACHE_TABLE_COUNT].name,path,get_str_len(path));
+	CACHE_TABLE[CACHE_TABLE_COUNT].content_type=CTE_MOUNT_PNT;
+	CACHE_TABLE[CACHE_TABLE_COUNT].content.mount_table_entry_ptr=mnt_tbl_e;	//cachetableentry points to  mounttableentry which has vfsnodeptr
+	CACHE_TABLE[CACHE_TABLE_COUNT].path_hash=hash_value;
 
 	return  0;
 fail:

@@ -20,7 +20,8 @@ struct vfs_node;
 struct cache_table_entry{
 
     struct cache_table_entry* parent;
-    char name[FILE_NAME_LEN_MAX];
+    //char name[FILE_NAME_LEN_MAX];
+    unit64_t path_hash;
     //void* target;   it generally points to a vfs_node struct
     //but can also point to a mount_table_entry
     int content_type;
@@ -33,7 +34,7 @@ struct cache_table_entry{
     uint16_t flags;
 
 
-};  //size  32 bytes
+};  //size  64 bytes
 
 struct file{
     struct vfs_node* vfs_node_ptr;
