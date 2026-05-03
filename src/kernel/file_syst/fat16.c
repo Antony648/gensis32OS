@@ -62,21 +62,28 @@ fail:
 }
 int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
 {
-	char* src;
+
 	struct mount_table_entry* mnt_tbl_e=NULL;
 	mnt_tbl_e=heap_cream_malloc(sizeof(struct mount_table_entry));
+	if(!mnt_tbl_e)
+		goto fail;
+
 	if(general)
-	{
 		general->next=mnt_tbl_e;
-		general=mnt_tbl_e;
-		mnt_tbl_e->next=NULL;
-	}
+
+	general=mnt_tbl_e;
+	mnt_tbl_e->next=NULL;
+
 	struct fat16_bpb* bpb=NULL;
 	bpb=parse_partition_fill_bpb_fat16(part);
-
+	if(!bpb)
+		goto fail;
 	//root does not exist in fat16 one is supposed to fabricate it
 	struct vfs_node* r_node=NULL;
 	r_node=(struct vfs_node*)heap_cream_malloc(sizeof(struct vfs_node));
+	if(!r_node)
+		goto fail;
+
 	mnt_tbl_e->fs_root_node=r_node;
 	mnt_tbl_e->mnt_part=part;
 
@@ -85,12 +92,13 @@ int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
 	r_node->mte=mnt_tbl_e;
 	uint32_t root_dir_count=bpb->data_lba-bpb->root_lba;
 	r_node->size=bpb->bytes_per_sect* root_dir_count;
-
+	heap_cream_free(bpb);
 	//ct
 	CACHE_TABLE_COUNT++;
 	CACHE_TABLE[CACHE_TABLE_COUNT].refcount=1;
 	CACHE_TABLE[CACHE_TABLE_COUNT].target=mnt_tbl_e;	//cachetableentry points to  mounttableentry which has vfsnodeptr
-	memcpy(CACHE_TABLE[CACHE_TABLE_COUNT].name,src,get_str_len(src));
+	memcpy(CACHE_TABLE[CACHE_TABLE_COUNT].name,path,get_str_len(path));
+
 	return  0;
 fail:
 	if(mnt_tbl_e) heap_cream_free(mnt_tbl_e);

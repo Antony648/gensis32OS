@@ -15,13 +15,20 @@
 #define CTE_FILE        0x0101
 #define CTE_DIR         0x0010
 #define CTE_ROOT        0X1000
-
+struct mount_table_entry;
+struct vfs_node;
 struct cache_table_entry{
 
     struct cache_table_entry* parent;
     char name[FILE_NAME_LEN_MAX];
-    void* target;   //it generally points to a vfs_node struct 
+    //void* target;   it generally points to a vfs_node struct
     //but can also point to a mount_table_entry
+    int content_type;
+    union content
+    {
+        struct mount_table_entry *mnt_tbl_entry_ptr;
+        struct vfs_node *vfs_node_ptr;
+    };
     uint16_t refcount;
     uint16_t flags;
 
