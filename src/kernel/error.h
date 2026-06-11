@@ -8,4 +8,8 @@
 #define 	TIMEOUT			5
 #define 	VFS_NODE_DEPLETION_PANIC 34
 #define 	MOUNT_FAILURE	35
+#define 	MOUNT_TABLE_FULL 36
+#define 	FILE_NOT_FOUND 	37
+#define 	FILE_NOT_MOUNTPOINT 38
+#define 	RESOURCE_BUSY	39
 #endif

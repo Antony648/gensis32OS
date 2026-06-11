@@ -21,18 +21,19 @@ struct cache_table_entry{
 
     struct cache_table_entry* parent;
     //char name[FILE_NAME_LEN_MAX];
-    unit64_t path_hash;
+    uint64_t path_hash;
     //void* target;   it generally points to a vfs_node struct
     //but can also point to a mount_table_entry
     int content_type;
-    union content
+    union c
     {
         struct mount_table_entry *mnt_tbl_entry_ptr;
         struct vfs_node *vfs_node_ptr;
-    };
+    }content;
     uint16_t refcount;
     uint16_t flags;
-
+    struct cache_table_entry* next;
+    struct cache_table_entry* prev;
 
 };  //size  64 bytes
 
@@ -47,7 +48,7 @@ struct mount_table_entry{
     struct vfs_node* fs_root_node;
     void* fs_bpb;   //generally for bpb of any file_system
     struct mount_table_entry* next;
-    
+    struct mount_table_entry* prev;
 
 };
 
@@ -63,10 +64,14 @@ struct vfs_node{
 
     uint32_t access_time;
     uint32_t modified_time;
-
-    struct cache_table_entry* ct;
+    union k
+    {
+        struct cache_table_entry* ct;    
+        struct mount_table_entry* mte;
+    }content;
+    
     void* fs_specific;      //generally an address or byte offset to a root sect dir ent in fat16
-    struct mount_table_entry* mte;
+    
    
 
 };
