@@ -2,6 +2,7 @@
 #include "../disk/disk.h"
 #include "../heap/heap_cream.h"
 #include "vfs.h"
+#include <stddef.h>
 #include <stdint.h>
 #include "../string/string.h"
 #include "../error.h"
@@ -232,17 +233,55 @@ int  get_file_specific_fat16(struct vfs_node* parent,struct vfs_node* child,char
 
 	return 0;
 }
-uint32_t get_last_open(char* path)
+struct cache_table_entry* is_present_in_cache_table(int mode,uint64_t hash, char* path)
+{
+	//mode 1 : hash, mode2: cache
+	struct cache_table_entry *cache_tbl_entry_temp=0x0;
+	switch(mode)
+	{
+		case 2:
+			hash=generate_hash(path);
+		case 1:
+			for(struct cache_table_entry *i=cache_table_start;i;i=i->next)
+			{
+				if(i->path_hash==hash)
+					cache_tbl_entry_temp=i;
+			}
+			break;
+		default: print("fat16.c:illegal call in is_present_in_cache_table\n");return 0x00;
+	}
+	return cache_tbl_entry_temp;
+}
+
+struct cache_table_entry* get_last_open(char* path)
 {
 	//break the path using delimeter from reverse
 	//generate hash for whole path(exclude delimiter at end) , see if it is aldready open
 	//if no, exclude the last word and the delimiter before it and generate hash and compare
-	//repeat above step till you hit a value in cache table.. after finding the value, get fs_specific from node
-	//return fs_speicific
+	//repeat above step till you hit a value in cache table.. after finding the value, get cache_table_entry
+	
+	int len=strlen(path);
+	uint32_t end=-1;
+	for(int i=len-1;i>=0;i--)
+	{
+		if(path[i]=='/')
+		{
+			i--;
+			uint64_t hash=generate_hast_start_end(path, 0, i);
+			struct cache_table_entry* k=is_present_in_cache_table(1,hash,NULL);
+			if(k)
+				return k;
+			
+		}
+		
+	}
+	return (struct cache_table_entry*)0x0;
 }
-void get_root_specific_fat16(struct vfs_node* node, struct partition* part)
+uint32_t get_root_specific_fat16(struct vfs_node* node, struct partition* part)
 {
-	 struct fat16_bpb* bpb=parse_partition_fill_bpb_fat16(part)		;
+	 struct fat16_bpb* bpb=parse_partition_fill_bpb_fat16(part);
+	 //we have to caclulate start of root section
+	return (uint32_t)(bpb->reserved_sectors+(uint16_t)bpb->fat_count*bpb->sectors_per_fat);
 	 
 }
 int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
@@ -276,12 +315,41 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	//use fat section and locate next cluster and load it to local memory, read remaining
 	//repeat process till size is reached
 	//if next cluster is not present, return end of file after reading the last cluster
+
+	/*
+	uint16_t bytes_per_sect;
+	uint8_t sect_per_clust;
+	uint16_t reserved_sectors;
+	uint8_t fat_count;
+	uint16_t sectors_per_fat;
+	uint16_t root_entry_count;
+
+	uint32_t fat_lba;
+	uint32_t root_lba;
+	uint32_t data_lba;
+	*/
+	
+	uint32_t data_sec_clust_start=file_ptr->vfs_node_ptr->fs_specific;
+	struct mount_table_entry* mnt_tble=file_ptr->vfs_node_ptr->origin_mount_point;
+	struct fat16_bpb * bpb=(struct fat16_bpb*)mnt_tble->fs_bpb;
+
+	uint32_t cluster_count= file_ptr->offset/(bpb->bytes_per_sect*bpb->sect_per_clust);  //tells how many clusters should we hop using FAT
+	uint32_t offset_in_cluster= file_ptr->offset%(bpb->bytes_per_sect*bpb->sect_per_clust); 
+	//tells us the offset in the given cluster
+	uint8_t* cluster_temp=heap_cream_malloc((size_t)(bpb->sectors_per_fat));
+	uint16_t next_cluster,current_cluser=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
+	for(uint32_t i=0;i<cluster_count;i++)
+	{
+		 
+	}
+	heap_cream_free(cluster_temp);
+
 }
-int mkdir_fat16(char* path)
+int create_file_fat16(char* path)
 {
 
 }
-int rmdir_fat16(char* path)
+int delete_file_fat16(char* path)
 {
 
 }

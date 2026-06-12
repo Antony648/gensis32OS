@@ -19,15 +19,15 @@ struct fat16_bpb
 	uint32_t data_lba;
 };
 
-void get_root_specific_fat16(struct vfs_node* node, struct partition* part);
+uint32_t get_root_specific_fat16(struct vfs_node* node, struct partition* part);
 int get_file_specific_fat16(struct vfs_node* parent,struct vfs_node* child,char* name);
 int write_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* );
 int mount_fat16(struct partition* part,char* path,struct vfs_node* node);
-int mkdir_fat16(char* path);
-int rmdir_fat16(char* path);
-uint32_t get_last_open(char* path);
+int create_file_fat16(char* path);
+int delete_file_fat16(char* path);
+struct cache_table_entry* get_last_open(char* path);
 int umount_fat16(char* path);
 
 struct file_system fat16_fs={
@@ -39,8 +39,8 @@ struct file_system fat16_fs={
 		.vfs_read=read_fat16,
 		.mount=mount_fat16,
 		.umount=umount_fat16,
-		.vfs_mkdir=mkdir_fat16,
-		.vfs_rmdir=rmdir_fat16,
+		.vfs_create_file=create_file_fat16,
+		.vfs_delete_file=delete_file_fat16,
 	}
 };
 #endif
