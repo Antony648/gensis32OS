@@ -44,6 +44,7 @@ struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* part )
 	if(bpb_ptr->sect_per_clust ==0)
 		goto fail;
 
+
 	bpb_ptr->reserved_sectors=get_2_bytes(&sect_0_buf[0xe]);
 	bpb_ptr->fat_count=sect_0_buf[0x10];
 
@@ -71,7 +72,7 @@ fail:
 	return NULL;
 }
 
-int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
+int mount_fat16(struct partition* part,char* path,struct vfs_node*r_node)
 {
 
 	if(CACHE_TABLE_COUNT>=MAX_OPEN_FILE_COUNT)
@@ -114,28 +115,34 @@ int mount_fat16(struct partition* part,char* path,struct vfs_node*node)
 		goto fail;
 
 	//root does not exist in fat16 one is supposed to fabricate it
-	struct vfs_node* r_node=NULL;
-	r_node=(struct vfs_node*)heap_cream_malloc(sizeof(struct vfs_node));
+	//struct vfs_node* r_node=NULL;
+	//r_node=(struct vfs_node*)heap_cream_malloc(sizeof(struct vfs_node));
 	if(!r_node)
 		goto fail;
 
 	mnt_tbl_e->fs_root_node=r_node;
 	mnt_tbl_e->mnt_part=part;
-	mnt_tbl_e->fs_bpb=(void*)0x0;
+	mnt_tbl_e->fs_bpb=(void*)bpb;
 
 	//node
 	r_node->node_id=generate_vfs_node_id();
 	r_node->content.mte=mnt_tbl_e;
 	uint32_t root_dir_count=bpb->data_lba-bpb->root_lba;
+
 	r_node->size=bpb->bytes_per_sect* root_dir_count;
-	heap_cream_free(bpb);
+	r_node->fs_specific=(uint32_t)(bpb->reserved_sectors+(uint16_t)bpb->fat_count*bpb->sectors_per_fat);
+
+	//heap_cream_free(bpb);
 	//ct
 	i=heap_cream_malloc(sizeof(struct cache_table_entry));
 	i->refcount=1;
 	i->content_type=CTE_MOUNT_PNT;
 	i->content.mnt_tbl_entry_ptr=mnt_tbl_e;	//cachetableentry points to  mounttableentry which has vfsnodeptr
 	i->path_hash=hash_value;
+
 	CACHE_TABLE_COUNT++;
+	mnt_tbl_e->ct_table_entry=i;
+
 	if(!cache_table_start)
 	{
 		cache_table_start=i;
@@ -196,11 +203,8 @@ int umount_fat16(char* path)
 	if(mnt_tbl_entry_temp->fs_bpb)
 		heap_cream_free(mnt_tbl_entry_temp->fs_bpb);
 	if(mnt_tbl_entry_temp->fs_root_node)
-	{
-		if(mnt_tbl_entry_temp->fs_root_node->fs_specific)
-			heap_cream_free(mnt_tbl_entry_temp->fs_root_node->fs_specific);
 		heap_cream_free(mnt_tbl_entry_temp->fs_root_node);
-	}
+	
 	
 	struct mount_table_entry *previous,*k_next;
 	previous=mnt_tbl_entry_temp->prev;
@@ -214,11 +218,70 @@ int umount_fat16(char* path)
 }
 int  get_file_specific_fat16(struct vfs_node* parent,struct vfs_node* child,char* name)
 {
+	//get data section  start cluster of the file
+	//get the data section of the parent node from fs_specific
+	//dump sector_per_cluster count from the data section of parent
+	//check for the given file, if not found in given cluster
+	//go to FAT and load the next cluster, repeat the process till you find file
+	//if file not found return file not found or file not present
+	//if files entry found , find its start cluster in datasection, 
+	//is the file the last file in the path or the required file? 
+	//if yes create cache table entry, assign values to node, and return success
+	//if no , then repeat from step 1 for the subdirectory
 	//FAT16_FILE_NOT_PRESENT_ERROR
+
 	return 0;
 }
-
+uint32_t get_last_open(char* path)
+{
+	//break the path using delimeter from reverse
+	//generate hash for whole path(exclude delimiter at end) , see if it is aldready open
+	//if no, exclude the last word and the delimiter before it and generate hash and compare
+	//repeat above step till you hit a value in cache table.. after finding the value, get fs_specific from node
+	//return fs_speicific
+}
 void get_root_specific_fat16(struct vfs_node* node, struct partition* part)
 {
-		
+	 struct fat16_bpb* bpb=parse_partition_fill_bpb_fat16(part)		;
+	 
+}
+int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
+{
+	//use the file to get to the node and get the fs_specific(start of cluster in data section of file)
+	//find the offset value form the file struct, compute the bytes to know what cluster to read data 
+	//from , if the bytes is less than a cluster, get cluster zero, of clusternumber=startcluster+(bytesoffset/bytespercluster)
+	//and offset in that cluster by offsetinclusterbytes=(bytesoffset%bytespercluster)
+	//now based on the value of clusternumber , go to FAT and identify next or following clusters till ,for 
+	//clusternumber of times, ie:if clusternumber=0, go to fat , return the value after 0 jumps, if value is 2
+	//go to fat, (currently at cluster 0),jump1, go to the next cluster, jump2 , now we are at data start of 
+	//requried cluster, after you have the actual cluster start offset in data section
+	//copy that entire cluster to a local buffer, now in the offsetinclusterbytes, start writing the contents 
+	//in that sector now write the entire cluster back into the disk, check if it goes out of bound with the cluster
+	//if it goes out of bound, check for the next cluster , if present, load it write the remaining contents
+	//and continue the process
+
+	//if next cluster not present,modify the fat section, find a free cluster modify current cluster end value
+	//(0xffff or 0xfff8)with new found cluster, and set the new cluster with 0xffff in the fat table, 
+	//memset the buffer in hand write the remaining contnets and write it back to the disk
+
+	//continue above till the buffer is empty
+}
+int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
+{
+	//use the file to get node, and get fs_specific(start of cluster in data section of file)
+	//now compute the clusternumber, clusternumber=startcluster+(bytesoffset/bytespercluster)
+	//now compute the offset, offsetinclusterbytes=(bytesoffset%bytespercluster)
+	//load the clusternumber , a single cluster into local memory, read from offsetinclusterbytes
+	//till value of size, if size outside cluster bounds, 
+	//use fat section and locate next cluster and load it to local memory, read remaining
+	//repeat process till size is reached
+	//if next cluster is not present, return end of file after reading the last cluster
+}
+int mkdir_fat16(char* path)
+{
+
+}
+int rmdir_fat16(char* path)
+{
+
 }
