@@ -4,7 +4,7 @@
 #include "vfs.h"
 #include <stdint.h>
 
-#define  FAT16_FILE_NOT_PRESENT_ERROR 1
+//#define  FAT16_FILE_NOT_PRESENT_ERROR 1
 struct fat16_bpb
 {
 	uint16_t bytes_per_sect;
@@ -25,6 +25,9 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* );
 int mount_fat16(struct partition* part,char* path,struct vfs_node* node);
+int mkdir_fat16(char* path);
+int rmdir_fat16(char* path);
+uint32_t get_last_open(char* path);
 int umount_fat16(char* path);
 
 struct file_system fat16_fs={
@@ -36,6 +39,8 @@ struct file_system fat16_fs={
 		.vfs_read=read_fat16,
 		.mount=mount_fat16,
 		.umount=umount_fat16,
+		.vfs_mkdir=mkdir_fat16,
+		.vfs_rmdir=rmdir_fat16,
 	}
 };
 #endif
