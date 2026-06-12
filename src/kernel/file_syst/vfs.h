@@ -19,19 +19,17 @@ struct mount_table_entry;
 struct vfs_node;
 struct cache_table_entry{
 
-    struct cache_table_entry* parent;
-    //char name[FILE_NAME_LEN_MAX];
     uint64_t path_hash;
-    //void* target;   it generally points to a vfs_node struct
-    //but can also point to a mount_table_entry
     int content_type;
     union c
     {
-        struct mount_table_entry *mnt_tbl_entry_ptr;
-        struct vfs_node *vfs_node_ptr;
+        struct mount_table_entry *mnt_tbl_entry_ptr;//for mount points
+        struct vfs_node *vfs_node_ptr;  //for normal files
     }content;
     uint16_t refcount;
     uint16_t flags;
+    struct mount_table_entry *origin_mount_point; //for normal file pointing 
+                        //to origin to get partition, bpb
     struct cache_table_entry* next;
     struct cache_table_entry* prev;
 
@@ -46,6 +44,7 @@ struct file{
 struct mount_table_entry{
     struct partition* mnt_part;
     struct vfs_node* fs_root_node;
+    struct cache_table_entry *ct_table_entry;
     void* fs_bpb;   //generally for bpb of any file_system
     struct mount_table_entry* next;
     struct mount_table_entry* prev;
@@ -70,7 +69,7 @@ struct vfs_node{
         struct mount_table_entry* mte;
     }content;
     
-    void* fs_specific;      //generally an address or byte offset to a root sect dir ent in fat16
+    uint32_t fs_specific;      //generally an address or byte offset to a root sect dir ent in fat16
     
    
 
@@ -82,6 +81,10 @@ struct fops{
     int (*vfs_write)(struct file* file_ptr,char* buffer,uint32_t size);
     int (*vfs_read)(struct file* file_ptr,char* buffer,uint32_t size);
     //void* (*parse_partition_fill_bpb)(struct partition* part);
+    int (*vfs_open)();
+    int (*vfs_close)();
+    int (*vfs_mkdir)(char* path);
+    int (*vfs_rmdir)(char* path);
     int (*mount)(struct partition* part,char* path,struct vfs_node* parent);
     int (*umount)(char* path);
 };
@@ -91,8 +94,10 @@ struct file_system{
 };
 
 int vfs_mount(struct partition* par,char* path,struct vfs_node* node);
-struct file* vfs_open(char* path);
-int vfs_close(struct file* file_ptr);
+struct file* open_file(char* path);
+int close_file(struct file* file_ptr);
+int read_file(struct file*,char* buffer,uint32_t size,uint32_t offset);
+int write_file(struct file*,char* buffer,uint32_t size,uint32_t offset);
 int generate_vfs_node_id();
 struct cache_table_entry* it_all_exist_but_one(const char*);
 size_t get_me_last_head(const char*);

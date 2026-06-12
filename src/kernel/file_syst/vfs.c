@@ -9,17 +9,25 @@ struct cache_table_entry* cache_table_last=0x00;
 uint8_t cachet_empty_table[20];
 int vfs_mount(struct partition* par,char* path,struct vfs_node* node)
 {
-
+	//analyse partition type and call accordingly
 }
 
 struct file* vfs_open(char* path)
 {
+	//check if already open , in cache table
+
+	// break path using path parser, check if each subset is present from start,
+	//if you reach a point of a file and if it is not present use specific of that 
+	//file find the filesystem and use drivers to open that dir temporatrily
+	//reapeat the process till you get final file
 
 }
 
 int vfs_close(struct file* file_ptr)
 {
-
+	//check for file in cache table, 
+	//if found check for refcount, if zero
+	//destroy file pointer,vfs node, cache table entry
 }
 
 int generate_vfs_node_id()
