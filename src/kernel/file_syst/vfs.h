@@ -28,7 +28,7 @@ struct cache_table_entry{
     }content;
     uint16_t refcount;
     uint16_t flags;
-    struct mount_table_entry *origin_mount_point; //for normal file pointing 
+    
                         //to origin to get partition, bpb
     struct cache_table_entry* next;
     struct cache_table_entry* prev;
@@ -68,7 +68,7 @@ struct vfs_node{
         struct cache_table_entry* ct;    
         struct mount_table_entry* mte;
     }content;
-    
+    struct mount_table_entry *origin_mount_point; //for normal file pointing 
     uint32_t fs_specific;      //generally an address or byte offset to a root sect dir ent in fat16
     
    
@@ -76,15 +76,15 @@ struct vfs_node{
 };
 
 struct fops{
-    void (*get_root_specific)(struct vfs_node* node, struct partition* part);
+    uint32_t (*get_root_specific)(struct vfs_node* node, struct partition* part);
     int (*get_file_specific)(struct vfs_node*node, struct vfs_node* node1, char* name);
     int (*vfs_write)(struct file* file_ptr,char* buffer,uint32_t size);
     int (*vfs_read)(struct file* file_ptr,char* buffer,uint32_t size);
     //void* (*parse_partition_fill_bpb)(struct partition* part);
-    int (*vfs_open)();
-    int (*vfs_close)();
-    int (*vfs_mkdir)(char* path);
-    int (*vfs_rmdir)(char* path);
+    int (*vfs_open)(char* path);
+    int (*vfs_close)(char* path);
+    int (*vfs_create_file)(char* path);
+    int (*vfs_delete_file)(char* path);
     int (*mount)(struct partition* part,char* path,struct vfs_node* parent);
     int (*umount)(char* path);
 };
