@@ -2,7 +2,8 @@
 #define DISK_H
 
 #include <stdint.h>
-
+#define SECTOR_SIZE_DISK_GENERAL_BYTES 	512
+#define SECTOR_SIZE_DISK_GENERAL_WORD	256
 
 #define ATA_WAIT 100000
 typedef uint32_t DISK_TYPE;
@@ -22,7 +23,7 @@ enum FILE_SYST_TYPE
 	
 };
 
-#include "../file_syst/partitions.h"
+struct partition;
 struct disk
 {
 	DISK_TYPE type;
@@ -43,9 +44,21 @@ struct disk
 	
 	
 };
+//partition was decclared in file partition.h, but then
+//moved to here to prevent interlocked dependency
+struct partition
+{
+	struct disk* f_disk;
+	enum FILE_SYST_TYPE fs_type;
+	uint32_t start_sect;
+	uint32_t sect_num;
+	uint8_t is_bootable;
+	struct partition* next;
+};
 void disk_search_and_init();
 struct disk* get_disk(uint32_t index);
 int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf);
 void disk_debug_print();
 //void destroy_disk_info();
+
 #endif
