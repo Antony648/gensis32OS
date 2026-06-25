@@ -24,7 +24,12 @@ static inline uint32_t get_4_byte(uint8_t* ptr)
 {
 	return  (uint32_t)((ptr[2]<<24)|(ptr[1]<<16)|(ptr[0])<<8|ptr[0]);
 }
-
+uint32_t min(uint32_t val1,uint32_t val2)
+{
+	if(val1 < val2)
+		return  val1;
+	return val2;
+}
 struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* part )
 {
 	//
@@ -315,19 +320,6 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	//use fat section and locate next cluster and load it to local memory, read remaining
 	//repeat process till size is reached
 	//if next cluster is not present, return end of file after reading the last cluster
-
-	/*
-	uint16_t bytes_per_sect;
-	uint8_t sect_per_clust;
-	uint16_t reserved_sectors;
-	uint8_t fat_count;
-	uint16_t sectors_per_fat;
-	uint16_t root_entry_count;
-
-	uint32_t fat_lba;
-	uint32_t root_lba;
-	uint32_t data_lba;
-	*/
 	
 	uint32_t data_sec_clust_start=file_ptr->vfs_node_ptr->fs_specific;
 	struct mount_table_entry* mnt_tble=file_ptr->vfs_node_ptr->origin_mount_point;
@@ -335,12 +327,67 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 	uint32_t cluster_count= file_ptr->offset/(bpb->bytes_per_sect*bpb->sect_per_clust);  //tells how many clusters should we hop using FAT
 	uint32_t offset_in_cluster= file_ptr->offset%(bpb->bytes_per_sect*bpb->sect_per_clust); 
+	uint32_t start_sect_part=mnt_tble->mnt_part->start_sect;
 	//tells us the offset in the given cluster
-	uint8_t* cluster_temp=heap_cream_malloc((size_t)(bpb->sectors_per_fat));
-	uint16_t next_cluster,current_cluser=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
+	
+	uint16_t cur_cluster=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
+	uint32_t buffer_index=0;
+
+	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
+	struct disk* disk_cur=mnt_tble->mnt_part->f_disk;
 	for(uint32_t i=0;i<cluster_count;i++)
 	{
-		 
+		
+		uint64_t actual_byte_offset=cur_cluster*2;
+		uint16_t byte_offset=(uint16_t)actual_byte_offset;
+
+		//check cur_cluster if 0xff or 0xf8 return end of file
+		if((byte_offset == 0xff)||(byte_offset ==0xf8))
+			return -EOF;
+		
+		//compute which fat cluster will have the required cluster number based on partition
+		//now add it with start sector of partition and load it
+		//find the location where offset is stored inside said loaded cluster
+		//calculate the entry of the cluster to find the cur cluster
+
+		uint32_t sector_to_load=(bpb->reserved_sectors)+(actual_byte_offset/bpb->bytes_per_sect);
+		read_disk_block(disk_cur, start_sect_part+sector_to_load, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),single_cluster);
+		cur_cluster=single_cluster[actual_byte_offset%bpb->bytes_per_sect];
+		
+
+	}
+	heap_cream_free(single_cluster);
+	//our current_cluster has the cluster we need to start reading the file after offset computation
+
+	uint8_t* cluster_temp=heap_cream_malloc((size_t)(bpb->bytes_per_sect*bpb->sect_per_clust));
+	//we have found the start cluster to read as per offset and also offset_in_cluster
+	//int size=size_to_read;	//converting to signed integer for next operations
+
+	while(buffer_index< size)
+	{
+		//this loop deals with reading,
+		//the underlying disk_read can only read as a sectior 512 bytes,so we should
+		//make that adjustment here as to how many sectors of size 512 make up a partition specific sector
+
+		//loop logic:
+		//dump whole sector to cluster_temp,
+		//target_size=min(size,(size_of_cluster-offset)) 
+		//copy bytes from offset_in_cluster to the buffer starting from buffer_index 
+		//target_size bytes,update buffer_index,
+
+		//clear cluster_temp,use it to load the dir ent, find the next sector to read
+		//if 0xff, end of file , if another sector, set it as start cluster and offset=0
+		for(int q=0;q<bpb->sect_per_clust;q++)
+		{
+			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
+			read_disk_block(disk_cur, start_sect_part+(cur_cluster*2), (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),&(cluster_temp[cluster_temp_offset]));
+		}
+		//the whole cluster is loaded into the cluster_temp
+		uint32_t target_size=min(size-buffer_index,((bpb->bytes_per_sect*bpb->sect_per_clust)-offset_in_cluster));
+		memcpy(&(cluster_temp[offset_in_cluster]),&(buffer[buffer_index]),target_size);
+		buffer_index+=target_size;
+
+
 	}
 	heap_cream_free(cluster_temp);
 

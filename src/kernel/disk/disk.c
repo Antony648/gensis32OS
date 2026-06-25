@@ -9,8 +9,7 @@
 #include <stdint.h>
 
 #include "stdbool.h"
-#define SECTOR_SIZE_DISK_GENERAL_BYTES 	512
-#define SECTOR_SIZE_DISK_GENERAL_WORD	256
+
 extern uint8_t G_BOOT_DRIVE;
 struct disk disk1;
 struct disk* motherlobe[DISK_SUPPORT_MAX]={NULL,NULL,NULL,NULL,NULL};
