@@ -9,6 +9,8 @@
 #include <stdint.h>
 
 #include "stdbool.h"
+#define SECTOR_SIZE_DISK_GENERAL_BYTES 	512
+#define SECTOR_SIZE_DISK_GENERAL_WORD	256
 extern uint8_t G_BOOT_DRIVE;
 struct disk disk1;
 struct disk* motherlobe[DISK_SUPPORT_MAX]={NULL,NULL,NULL,NULL,NULL};
@@ -286,11 +288,11 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 		//check for errros
 		if((inb(base+7)&0x01) || (inb(base+7)&0x20)) 
 			return DISK_READ_ERR;
-		for(int j=0;j<256;j++)
+		for(int j=0;j<SECTOR_SIZE_DISK_GENERAL_WORD;j++)
 		{
 			cur_start[j]=in16(base);
 		}
-		cur_start+=256;
+		cur_start+=SECTOR_SIZE_DISK_GENERAL_WORD;
 		
 	}
 	return 0;
@@ -351,11 +353,11 @@ int disk_write_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf
 		//check for errros
 		if((inb(base+7)&0x01) || (inb(base+7)&0x20))
 			return DISK_WRITE_ERR;
-		for(int j=0;j<256;j++)
+		for(int j=0;j<SECTOR_SIZE_DISK_GENERAL_WORD;j++)
 		{
 			out16(base,cur_start[j]);
 		}
-		cur_start+=256;
+		cur_start+=SECTOR_SIZE_DISK_GENERAL_WORD;
 		
 	}
 	k=ATA_WAIT;
