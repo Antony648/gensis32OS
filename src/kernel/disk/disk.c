@@ -335,16 +335,6 @@ int disk_write_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf
 	for(int i=0;i<450;i++)
 		asm volatile ("nop");
 	
-	k=ATA_WAIT;
-	while(inb(base+7) & 0x80)
-	{
-		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
-		//to wait for 10 sec,for now a curde sleep
-		if(k==0)
-			return -TIMEOUT;
-		k--;
-	}
-	
 	
 	//here we are ready to accept data from data port
 	uint16_t *cur_start=(uint16_t*)buf;
@@ -363,7 +353,7 @@ int disk_write_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf
 			return DISK_WRITE_ERR;
 		for(int j=0;j<256;j++)
 		{
-			outb(base,cur_start[j]);
+			out16(base,cur_start[j]);
 		}
 		cur_start+=256;
 		
