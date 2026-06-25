@@ -6,6 +6,7 @@
 #define 	GEN32_ENOMEM	3
 #define  	DISK_READ_ERR  	4
 #define 	TIMEOUT			5
+#define 	DISK_WRITE_ERR	6
 #define 	VFS_NODE_DEPLETION_PANIC 34
 #define 	MOUNT_FAILURE	35
 #define 	MOUNT_TABLE_FULL 36

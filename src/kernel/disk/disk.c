@@ -284,7 +284,7 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 		}
 	
 		//check for errros
-		if(inb(base+7)&0x01 || inb(base+7)&0x20) 
+		if((inb(base+7)&0x01) || (inb(base+7)&0x20)) 
 			return DISK_READ_ERR;
 		for(int j=0;j<256;j++)
 		{
@@ -294,6 +294,93 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 		
 	}
 	return 0;
+}
+int disk_write_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
+{
+	if(lba+total > disk_p->sect_count)
+		return -GEN32_INVARG;
+	unsigned short base=disk_p->base_data_port;
+	if(disk_p->is_master)
+		outb(base+6,0xe0|((lba>>24)&0x0f));
+	else
+		outb(base+6,0xf0|((lba>>24)&0xf));
+		
+	int k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
+	//check 
+	outb(base+2,total&0xff);
+	
+	outb(base+3,(lba &0xff));
+	outb(base+4,((lba>>8)&0xff));
+	outb(base+5,((lba>>16)&0xff));
+	
+	k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
+	outb(base+7,0x30);	//code 0x30 means to read
+	
+	for(int i=0;i<450;i++)
+		asm volatile ("nop");
+	
+	k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
+	
+	
+	//here we are ready to accept data from data port
+	uint16_t *cur_start=(uint16_t*)buf;
+	for(int i=0;i<total;i++)
+	{
+		k=ATA_WAIT;
+		while((inb(base+7)&0x88)!=0x08)
+		{
+			if(k==0)
+				return -TIMEOUT;
+			k--;
+		}
+	
+		//check for errros
+		if((inb(base+7)&0x01) || (inb(base+7)&0x20))
+			return DISK_WRITE_ERR;
+		for(int j=0;j<256;j++)
+		{
+			outb(base,cur_start[j]);
+		}
+		cur_start+=256;
+		
+	}
+	k=ATA_WAIT;
+	while(inb(base+7) & 0x80)
+	{
+		//sleep(10) // will uncommet after setting up int32 to throw someting an puttin proper isr
+		//to wait for 10 sec,for now a curde sleep
+		if(k==0)
+			return -TIMEOUT;
+		k--;
+	}
+	if((inb(base+7)&0x01) || (inb(base+7)&0x20)) 
+			return DISK_WRITE_ERR;
+	return 0;
+
 }
 void disk_debug_print()
 {
