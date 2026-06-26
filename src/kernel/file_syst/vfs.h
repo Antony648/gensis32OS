@@ -55,7 +55,7 @@ struct mount_table_entry{
 
 struct vfs_node{
    
-    uint32_t size;  
+    uint32_t size;  //data stored as byte count there by making largest file size about 4GB 
     uint32_t node_id; //unique id
 
     uint16_t mode;
