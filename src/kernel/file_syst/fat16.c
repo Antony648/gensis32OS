@@ -303,23 +303,23 @@ uint16_t get_free_cluster(struct disk* disk,struct fat16_bpb* bpb,uint32_t start
 	uint16_t* single_sect =(uint16_t*)heap_cream_malloc(bpb->bytes_per_sect);
 	uint16_t new_cluster_number=0xffff;
 	uint32_t new_cluster_sector,cur_cluster_sect_no;
-	uint32_t j,size_of_fat_in_bytes=bpb->sectors_per_fat*bpb->bytes_per_sect;
+	uint32_t new_sect_offset=0xffffffff,size_of_fat_in_bytes=bpb->sectors_per_fat*bpb->bytes_per_sect;
 	for(int i=0;i<bpb->sectors_per_fat;i++)
 	{
 		read_disk_block(disk, start_fat+i, 1, single_sect);
-		for(j=0;j<(bpb->bytes_per_sect/2);j++)
+		for(int j=0;j<(bpb->bytes_per_sect/2);j++)
 		{
 			if(single_sect[j]==0x0000)
 			{
 				single_sect[j]=0xffff;
 				new_cluster_sector=i;
-				
+				new_sect_offset=j;
 				break;
 			}
 		}
-		if(j>=(bpb->bytes_per_sect/2))
+		if(new_sect_offset>=(bpb->bytes_per_sect/2))
 			continue;
-		new_cluster_number=(i*(bpb->bytes_per_sect/2))+j;
+		new_cluster_number=(i*(bpb->bytes_per_sect/2))+new_sect_offset;
 		if(cur_cluster>=0xfff8 || cur_cluster< 0x0002)
 		{
 			write_disk_block(disk,start_fat+new_cluster_sector, 1, single_sect);
@@ -345,7 +345,7 @@ copy_fat_cleanup_return:
 	for(int i=1;i<bpb->fat_count;i++)
 	{
 		read_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+new_cluster_sector, 1, single_sect);
-		single_sect[j]=0xffff;
+		single_sect[new_sect_offset]=0xffff;
 		if(new_cluster_sector==cur_cluster_sect_no)
 		{
 			single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;	
