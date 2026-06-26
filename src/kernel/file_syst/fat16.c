@@ -30,6 +30,12 @@ uint32_t min(uint32_t val1,uint32_t val2)
 		return  val1;
 	return val2;
 }
+uint32_t max(uint32_t val1,uint32_t val2)
+{
+	if(val1 > val2)
+		return val1;
+	return val2;
+}
 struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* part )
 {
 	//
@@ -398,16 +404,89 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	uint32_t offset_in_cluster= file_ptr->offset%(bpb->bytes_per_sect*bpb->sect_per_clust); 
 	uint32_t start_sect_part=mnt_tble->mnt_part->start_sect;
 	uint16_t cur_cluster=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
-
+	struct disk* disk_cur=mnt_tble->mnt_part->f_disk;
 	if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
 	{
 		//code for finding free cluster and adding it to cur_cluster and setting the location in fat of that 
 		//cluster to 0xffff
+		cur_cluster=get_free_cluster(disk_cur, bpb, start_sect_part+bpb->reserved_sectors, cur_cluster);
+		file_ptr->vfs_node_ptr->fs_specific=cur_cluster;
 	}
+	
 	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
+	uint32_t temp=bpb->reserved_sectors+bpb->sectors_per_fat*bpb->fat_count;
+	temp+=(bpb->root_entry_count*32+(bpb->bytes_per_sect-1))/bpb->bytes_per_sect;
+	uint8_t* cluster_temp=heap_cream_malloc(bpb->sect_per_clust*bpb->bytes_per_sect);
+
+
+	while(1)
+	{
+		for(uint32_t i=0;i<cluster_count;i++)
+		{
+			
+			uint64_t actual_byte_offset=cur_cluster*2;
+			uint16_t byte_offset=(uint16_t)actual_byte_offset;
+
+			//compute which fat cluster will have the required cluster number based on partition
+			//now add it with start sector of partition and load it
+			//find the location where offset is stored inside said loaded cluster
+			//calculate the entry of the cluster to find the cur cluster
+
+			uint32_t sector_to_load=(bpb->reserved_sectors)+(actual_byte_offset/bpb->bytes_per_sect);
+			read_disk_block(disk_cur, start_sect_part+sector_to_load, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),single_cluster);
+			cur_cluster=*(uint16_t*)&single_cluster[actual_byte_offset%bpb->bytes_per_sect];
+
+			//check cur_cluster if 0xffff or 0xfff8, if yes find new empty cluster
+			if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
+				cur_cluster=get_free_cluster(disk_cur, bpb, start_sect_part+bpb->reserved_sectors, cur_cluster);
+			
+
+		}
+		//this loop deals with writing,
+		//the underlying disk_read can only read as a sectior 512 bytes,so we should
+		//make that adjustment here as to how many sectors of size 512 make up a partition specific sector
+
+		//loop logic:
+		//dump whole sector to cluster_temp,
+		//target_size=min(size,(size_of_cluster-offset)) 
+		//copy bytes from offset_in_cluster to the buffer starting from buffer_index 
+		//target_size bytes,update buffer_index,
+
+		//clear cluster_temp,use it to load the dir ent, find the next sector to read
+		//if 0xff, end of file , if another sector, set it as start cluster and offset=0
+		
+		for(int q=0;q<bpb->sect_per_clust;q++)
+		{
+			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
+			read_disk_block(disk_cur, start_sect_part+temp+((cur_cluster-2)*bpb->sect_per_clust)+q, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),&(cluster_temp[cluster_temp_offset]));
+		}
+		//the whole cluster is loaded into the cluster_temp
+		uint32_t target_size=min(size-buffer_index,((bpb->bytes_per_sect*bpb->sect_per_clust)-offset_in_cluster));
+		memcpy(&(cluster_temp[offset_in_cluster]),&(buffer[buffer_index]),target_size);
+		
+		for(int q=0;q<bpb->sect_per_clust;q++)
+		{
+			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
+			write_disk_block(disk_cur, start_sect_part+temp+((cur_cluster-2)*bpb->sect_per_clust)+q, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),&(cluster_temp[cluster_temp_offset]));
+		}
+
+		buffer_index+=target_size;
+		file_ptr->offset+=target_size;	// updating offset in file
+		file_ptr->vfs_node_ptr->size=max(file_ptr->vfs_node_ptr->size,buffer_index);
+
+		if(buffer_index>= size)
+			goto cleanup_return;
+		cluster_count=1;offset_in_cluster=0;
+		//load next cluster 
+		
+
+	}
+
+
 
 	cleanup_return:
 		heap_cream_free(single_cluster);
+		heap_cream_free(cluster_temp);
 		return buffer_index;
 	return 0;
 }
