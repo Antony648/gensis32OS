@@ -289,6 +289,76 @@ uint32_t get_root_specific_fat16(struct vfs_node* node, struct partition* part)
 	return (uint32_t)(bpb->reserved_sectors+(uint16_t)bpb->fat_count*bpb->sectors_per_fat);
 	 
 }
+uint16_t get_free_cluster(struct disk* disk,struct fat16_bpb* bpb,uint32_t start_fat,uint16_t cur_cluster)
+{
+	//start fat contains the start of fat sector with respect to disk 
+	//start_fat=disk_start_sect+bpb->reserved_sector_start
+
+	//load the fat_sectors one by one
+		//in each fat_sectors,scan 2 bytes , till you find empty,
+	//if we find one cluster empty, calculate new_cluster_number based on outer fat_sector count+inner offsetcount
+	//set location of new_cluster_number in fat region as 0xffff
+	//if cur_cluster < 0xfff8 ,then find its sector and offset fill its two bytes with new_cluster_number
+	//return new_cluster_number
+	uint16_t* single_sect =(uint16_t*)heap_cream_malloc(bpb->bytes_per_sect);
+	uint16_t new_cluster_number=0xffff;
+	uint32_t new_cluster_sector,cur_cluster_sect_no;
+	uint32_t j,size_of_fat_in_bytes=bpb->sectors_per_fat*bpb->bytes_per_sect;
+	for(int i=0;i<bpb->sectors_per_fat;i++)
+	{
+		read_disk_block(disk, start_fat+i, 1, single_sect);
+		for(j=0;j<(bpb->bytes_per_sect/2);j++)
+		{
+			if(single_sect[j]==0x0000)
+			{
+				single_sect[j]=0xffff;
+				new_cluster_sector=i;
+				write_disk_block(disk,start_fat+new_cluster_sector, 1, single_sect);
+				break;
+			}
+		}
+		if(j>=(bpb->bytes_per_sect/2))
+			continue;
+		new_cluster_number=(i*(bpb->bytes_per_sect/2))+j;
+		if(cur_cluster>=0xfff8 || cur_cluster< 0x0002)
+		{
+			cur_cluster_sect_no=0xffff;
+			goto copy_fat_cleanup_return;
+		}
+
+		cur_cluster_sect_no=cur_cluster/(bpb->bytes_per_sect/2);
+		read_disk_block(disk, start_fat+cur_cluster_sect_no, 1, single_sect);
+		single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;
+		write_disk_block(disk, start_fat+cur_cluster_sect_no, 1, single_sect);
+		break;
+	}
+copy_fat_cleanup_return:
+	//making the changes we made in fat0 to other fats
+	for(int i=1;i<bpb->fat_count;i++)
+	{
+		read_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+new_cluster_sector, 1, single_sect);
+		single_sect[j]=0xffff;
+		if(new_cluster_sector==cur_cluster_sect_no)
+		{
+			single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;	
+			write_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+new_cluster_sector, 1, single_sect);
+			continue;
+		}
+		write_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+new_cluster_sector, 1, single_sect);
+
+		//for handling where our init address was 0xffff or 0x0002
+		if(cur_cluster_sect_no>=0xfff8)
+			continue;
+		read_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+cur_cluster_sect_no, 1, single_sect);
+		single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;
+		write_disk_block(disk, start_fat+(i*bpb->sectors_per_fat)+cur_cluster_sect_no, 1, single_sect);
+
+	}
+
+
+	heap_cream_free(single_sect);
+	return new_cluster_number;
+}
 int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 {
 	//use the file to get to the node and get the fs_specific(start of cluster in data section of file)
@@ -309,6 +379,28 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	//memset the buffer in hand write the remaining contnets and write it back to the disk
 
 	//continue above till the buffer is empty
+	if(!size || !file_ptr)
+		return 0;
+	uint32_t buffer_index=0;
+	uint32_t data_sec_clust_start=file_ptr->vfs_node_ptr->fs_specific;
+	struct mount_table_entry* mnt_tble=file_ptr->vfs_node_ptr->origin_mount_point;
+	struct fat16_bpb * bpb=(struct fat16_bpb*)mnt_tble->fs_bpb;
+
+	uint32_t cluster_count= file_ptr->offset/(bpb->bytes_per_sect*bpb->sect_per_clust);  //tells how many clusters should we hop using FAT
+	uint32_t offset_in_cluster= file_ptr->offset%(bpb->bytes_per_sect*bpb->sect_per_clust); 
+	uint32_t start_sect_part=mnt_tble->mnt_part->start_sect;
+	uint16_t cur_cluster=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
+
+	if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
+	{
+		//code for finding free cluster and adding it to cur_cluster and setting the location in fat of that 
+		//cluster to 0xffff
+	}
+	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
+
+	cleanup_return:
+		heap_cream_free(single_cluster);
+		return buffer_index;
 	return 0;
 }
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
@@ -342,7 +434,8 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 	
 	struct disk* disk_cur=mnt_tble->mnt_part->f_disk;
-	
+	uint32_t temp=bpb->reserved_sectors+bpb->sectors_per_fat*bpb->fat_count;
+	temp+=(bpb->root_entry_count*32+(bpb->bytes_per_sect-1))/bpb->bytes_per_sect;
 	
 	//our current_cluster has the cluster we need to start reading the file after offset computation
 
@@ -385,8 +478,7 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 		//clear cluster_temp,use it to load the dir ent, find the next sector to read
 		//if 0xff, end of file , if another sector, set it as start cluster and offset=0
-		uint32_t temp=bpb->reserved_sectors+bpb->sectors_per_fat*bpb->fat_count;
-		temp+=(bpb->root_entry_count*32+(bpb->bytes_per_sect-1))/bpb->bytes_per_sect;
+		
 		for(int q=0;q<bpb->sect_per_clust;q++)
 		{
 			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
@@ -404,7 +496,6 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 		
 
 	}
-	heap_cream_free(cluster_temp);
 cleanup_return:
 	heap_cream_free(single_cluster);
 	heap_cream_free(cluster_temp);
