@@ -312,6 +312,8 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 }
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 {
+	if(!size)
+		return 0;
 	//use the file to get node, and get fs_specific(start of cluster in data section of file)
 	//now compute the clusternumber, clusternumber=startcluster+(bytesoffset/bytespercluster)
 	//now compute the offset, offsetinclusterbytes=(bytesoffset%bytespercluster)
@@ -333,38 +335,41 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	uint16_t cur_cluster=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
 	uint32_t buffer_index=0;
 
-	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
+	
 	struct disk* disk_cur=mnt_tble->mnt_part->f_disk;
-	for(uint32_t i=0;i<cluster_count;i++)
-	{
-		
-		uint64_t actual_byte_offset=cur_cluster*2;
-		uint16_t byte_offset=(uint16_t)actual_byte_offset;
-
-		//check cur_cluster if 0xff or 0xf8 return end of file
-		if((byte_offset == 0xff)||(byte_offset ==0xf8))
-			return -EOF;
-		
-		//compute which fat cluster will have the required cluster number based on partition
-		//now add it with start sector of partition and load it
-		//find the location where offset is stored inside said loaded cluster
-		//calculate the entry of the cluster to find the cur cluster
-
-		uint32_t sector_to_load=(bpb->reserved_sectors)+(actual_byte_offset/bpb->bytes_per_sect);
-		read_disk_block(disk_cur, start_sect_part+sector_to_load, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),single_cluster);
-		cur_cluster=single_cluster[actual_byte_offset%bpb->bytes_per_sect];
-		
-
-	}
-	heap_cream_free(single_cluster);
+	
+	
 	//our current_cluster has the cluster we need to start reading the file after offset computation
 
 	uint8_t* cluster_temp=heap_cream_malloc((size_t)(bpb->bytes_per_sect*bpb->sect_per_clust));
 	//we have found the start cluster to read as per offset and also offset_in_cluster
 	//int size=size_to_read;	//converting to signed integer for next operations
 
-	while(buffer_index< size)
+	while(1)
 	{
+		uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
+		for(uint32_t i=0;i<cluster_count;i++)
+		{
+			
+			uint64_t actual_byte_offset=cur_cluster*2;
+			uint16_t byte_offset=(uint16_t)actual_byte_offset;
+
+			//check cur_cluster if 0xff or 0xf8 return end of file
+			if((byte_offset == 0xff)||(byte_offset ==0xf8))
+				return -EOF;
+			
+			//compute which fat cluster will have the required cluster number based on partition
+			//now add it with start sector of partition and load it
+			//find the location where offset is stored inside said loaded cluster
+			//calculate the entry of the cluster to find the cur cluster
+
+			uint32_t sector_to_load=(bpb->reserved_sectors)+(actual_byte_offset/bpb->bytes_per_sect);
+			read_disk_block(disk_cur, start_sect_part+sector_to_load, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),single_cluster);
+			cur_cluster=single_cluster[actual_byte_offset%bpb->bytes_per_sect];
+			
+
+		}
+		heap_cream_free(single_cluster);
 		//this loop deals with reading,
 		//the underlying disk_read can only read as a sectior 512 bytes,so we should
 		//make that adjustment here as to how many sectors of size 512 make up a partition specific sector
@@ -377,6 +382,7 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 		//clear cluster_temp,use it to load the dir ent, find the next sector to read
 		//if 0xff, end of file , if another sector, set it as start cluster and offset=0
+		
 		for(int q=0;q<bpb->sect_per_clust;q++)
 		{
 			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
@@ -387,9 +393,16 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 		memcpy(&(cluster_temp[offset_in_cluster]),&(buffer[buffer_index]),target_size);
 		buffer_index+=target_size;
 
+		if(buffer_index>= size)
+			return 0;
+		
+		cluster_count=1;
+		//load next cluster 
+		
 
 	}
 	heap_cream_free(cluster_temp);
+	return 0;
 
 }
 int create_file_fat16(char* path)
