@@ -309,10 +309,11 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	//memset the buffer in hand write the remaining contnets and write it back to the disk
 
 	//continue above till the buffer is empty
+	return 0;
 }
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 {
-	if(!size)
+	if(!size || !file_ptr)
 		return 0;
 	//use the file to get node, and get fs_specific(start of cluster in data section of file)
 	//now compute the clusternumber, clusternumber=startcluster+(bytesoffset/bytespercluster)
@@ -331,9 +332,13 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 	uint32_t offset_in_cluster= file_ptr->offset%(bpb->bytes_per_sect*bpb->sect_per_clust); 
 	uint32_t start_sect_part=mnt_tble->mnt_part->start_sect;
 	//tells us the offset in the given cluster
+
 	
 	uint16_t cur_cluster=(uint16_t)file_ptr->vfs_node_ptr->fs_specific;
+	if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
+				return 0;
 	uint32_t buffer_index=0;
+	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
 
 	
 	struct disk* disk_cur=mnt_tble->mnt_part->f_disk;
@@ -347,17 +352,12 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 	while(1)
 	{
-		uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
 		for(uint32_t i=0;i<cluster_count;i++)
 		{
 			
 			uint64_t actual_byte_offset=cur_cluster*2;
 			uint16_t byte_offset=(uint16_t)actual_byte_offset;
 
-			//check cur_cluster if 0xff or 0xf8 return end of file
-			if((byte_offset == 0xff)||(byte_offset ==0xf8))
-				return -EOF;
-			
 			//compute which fat cluster will have the required cluster number based on partition
 			//now add it with start sector of partition and load it
 			//find the location where offset is stored inside said loaded cluster
@@ -365,11 +365,14 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 			uint32_t sector_to_load=(bpb->reserved_sectors)+(actual_byte_offset/bpb->bytes_per_sect);
 			read_disk_block(disk_cur, start_sect_part+sector_to_load, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),single_cluster);
-			cur_cluster=single_cluster[actual_byte_offset%bpb->bytes_per_sect];
+			cur_cluster=*(uint16_t*)&single_cluster[actual_byte_offset%bpb->bytes_per_sect];
+
+			//check cur_cluster if 0xff or 0xf8 return end of file
+			if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
+				goto cleanup_return;
 			
 
 		}
-		heap_cream_free(single_cluster);
 		//this loop deals with reading,
 		//the underlying disk_read can only read as a sectior 512 bytes,so we should
 		//make that adjustment here as to how many sectors of size 512 make up a partition specific sector
@@ -382,34 +385,39 @@ int read_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 		//clear cluster_temp,use it to load the dir ent, find the next sector to read
 		//if 0xff, end of file , if another sector, set it as start cluster and offset=0
-		
+		uint32_t temp=bpb->reserved_sectors+bpb->sectors_per_fat*bpb->fat_count;
+		temp+=(bpb->root_entry_count*32+(bpb->bytes_per_sect-1))/bpb->bytes_per_sect;
 		for(int q=0;q<bpb->sect_per_clust;q++)
 		{
 			uint32_t cluster_temp_offset=q*bpb->bytes_per_sect;
-			read_disk_block(disk_cur, start_sect_part+(cur_cluster*2), (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),&(cluster_temp[cluster_temp_offset]));
+			read_disk_block(disk_cur, start_sect_part+temp+((cur_cluster-2)*bpb->sect_per_clust)+q, (bpb->bytes_per_sect/SECTOR_SIZE_DISK_GENERAL_BYTES),&(cluster_temp[cluster_temp_offset]));
 		}
 		//the whole cluster is loaded into the cluster_temp
 		uint32_t target_size=min(size-buffer_index,((bpb->bytes_per_sect*bpb->sect_per_clust)-offset_in_cluster));
-		memcpy(&(cluster_temp[offset_in_cluster]),&(buffer[buffer_index]),target_size);
+		memcpy(&(buffer[buffer_index]),&(cluster_temp[offset_in_cluster]),target_size);
 		buffer_index+=target_size;
 
 		if(buffer_index>= size)
-			return 0;
-		
-		cluster_count=1;
+			goto cleanup_return;
+		cluster_count=1;offset_in_cluster=0;
 		//load next cluster 
 		
 
 	}
 	heap_cream_free(cluster_temp);
-	return 0;
+cleanup_return:
+	heap_cream_free(single_cluster);
+	heap_cream_free(cluster_temp);
+
+	file_ptr->offset+=buffer_index;
+	return buffer_index;
 
 }
 int create_file_fat16(char* path)
 {
-
+	return 0;
 }
 int delete_file_fat16(char* path)
 {
-
+	return 0;
 }
