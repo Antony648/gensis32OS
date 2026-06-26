@@ -296,7 +296,7 @@ int read_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 	}
 	return 0;
 }
-int disk_write_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
+int write_disk_block(struct disk* disk_p,uint32_t lba, uint32_t total, void* buf)
 {
 	if(lba+total > disk_p->sect_count)
 		return -GEN32_INVARG;
