@@ -313,7 +313,7 @@ uint16_t get_free_cluster(struct disk* disk,struct fat16_bpb* bpb,uint32_t start
 			{
 				single_sect[j]=0xffff;
 				new_cluster_sector=i;
-				write_disk_block(disk,start_fat+new_cluster_sector, 1, single_sect);
+				
 				break;
 			}
 		}
@@ -322,11 +322,19 @@ uint16_t get_free_cluster(struct disk* disk,struct fat16_bpb* bpb,uint32_t start
 		new_cluster_number=(i*(bpb->bytes_per_sect/2))+j;
 		if(cur_cluster>=0xfff8 || cur_cluster< 0x0002)
 		{
+			write_disk_block(disk,start_fat+new_cluster_sector, 1, single_sect);
 			cur_cluster_sect_no=0xffff;
 			goto copy_fat_cleanup_return;
 		}
 
 		cur_cluster_sect_no=cur_cluster/(bpb->bytes_per_sect/2);
+		if(cur_cluster_sect_no==new_cluster_sector)
+		{
+			single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;
+			write_disk_block(disk, start_fat+cur_cluster_sect_no, 1, single_sect);
+			break;
+		}
+		write_disk_block(disk,start_fat+new_cluster_sector, 1, single_sect);
 		read_disk_block(disk, start_fat+cur_cluster_sect_no, 1, single_sect);
 		single_sect[cur_cluster%(bpb->bytes_per_sect/2)]=new_cluster_number;
 		write_disk_block(disk, start_fat+cur_cluster_sect_no, 1, single_sect);
