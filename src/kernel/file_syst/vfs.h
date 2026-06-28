@@ -11,9 +11,9 @@
 #define file_read 0x1
 #define file_write 0x2
 #define file_exec 0x4
-#define CTE_MOUNT_PNT   0x0111
-#define CTE_FILE        0x0101
-#define CTE_DIR         0x0010
+#define CTE_MOUNT_PNT   0x0001
+#define CTE_FILE        0x0010
+#define CTE_DIR         0x0100
 #define CTE_ROOT        0X1000
 struct mount_table_entry;
 struct vfs_node;
@@ -104,4 +104,5 @@ int write_file(struct file*,char* buffer,uint32_t size,uint32_t offset);
 int generate_vfs_node_id();
 struct cache_table_entry* it_all_exist_but_one(const char*);
 size_t get_me_last_head(const char*);
+uint32_t get_fs_specific_cache_table(struct cache_table_entry* ct);
 #endif

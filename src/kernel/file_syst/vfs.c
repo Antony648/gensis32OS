@@ -55,3 +55,17 @@ size_t get_me_last_head(const char* path)
 			rtn_val=i;
 	}
 }
+uint32_t get_fs_specific_cache_table(struct cache_table_entry* ct)
+{
+	switch (ct->content_type) {
+		case CTE_MOUNT_PNT:
+			return ct->content.mnt_tbl_entry_ptr->fs_root_node->fs_specific;
+		case CTE_FILE:
+		case CTE_DIR:
+		case CTE_ROOT:
+			return ct->content.vfs_node_ptr->fs_specific;
+		default:
+			return 0;
+	
+	}
+}
