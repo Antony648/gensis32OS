@@ -411,6 +411,7 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 		//cluster to 0xffff
 		cur_cluster=get_free_cluster(disk_cur, bpb, start_sect_part+bpb->reserved_sectors, cur_cluster);
 		file_ptr->vfs_node_ptr->fs_specific=cur_cluster;
+		file_ptr->vfs_node_ptr->dirty_bit=1;
 	}
 	
 	uint8_t* single_cluster=(uint8_t*)heap_cream_malloc((size_t)(bpb->bytes_per_sect));
@@ -438,8 +439,10 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size)
 
 			//check cur_cluster if 0xffff or 0xfff8, if yes find new empty cluster
 			if((cur_cluster >=0xfff8 )|| (cur_cluster< 0x0002))
+			{
 				cur_cluster=get_free_cluster(disk_cur, bpb, start_sect_part+bpb->reserved_sectors, cur_cluster);
-			
+				file_ptr->vfs_node_ptr->dirty_bit=1;
+			}
 
 		}
 		//this loop deals with writing,
@@ -591,8 +594,74 @@ cleanup_return:
 	return buffer_index;
 
 }
+struct cache_table_entry* search_cache_table(uint64_t hash_val)
+{
+	struct cache_table_entry *temp=cache_table_start;
+	while (temp)
+	{
+		if(temp->path_hash==hash_val)
+			return temp;
+	}
+	return NULL;
+}
+uint8_t get_fs_specific_path_last_dir(char* path,uint16_t *fs_specific)
+{
+	//return code:
+	//0x00 failure
+	//0x01 sending fs_specific of the dir just above the file
+	//0x02 file already open in cachetable
+	int len=strlen((const char*)path);
+	if(path[len-1]=='/')	//excluding the last / in the search 
+		len-=2;
+	else
+	 	len-=1;
+	struct cache_table_entry* ct_entry=search_cache_table(generate_hast_start_end(path, 0, len));
+	if(ct_entry)
+		{
+			*fs_specific=(uint16_t)get_fs_specific_cache_table(ct_entry); 
+			return  0x02;
+		}
+	int i=len;
+	int success=1;
+	while(1)
+	{
+		
+		while(i>=0 && path[i]!='/')
+			i--;
+		if(i<=0)
+			goto failure;
+		i--;
+		//generate hash for path excluding last word
+		uint64_t hash_val=generate_hast_start_end(path, 0, i);
+		//check if the path is open in cache table
+		ct_entry=search_cache_table(hash_val);
+		if(ct_entry)
+			break;
+		success=0;	//if it hits alteast once then, we donot have cache table entry for the dir just above
+		//the target dir
+
+	}
+	if(success)
+	{
+		*fs_specific=(uint16_t)get_fs_specific_cache_table(ct_entry);
+		return 0x00;
+	}
+	//we have work to do
+	//i contains last path except the /, check if it is a directory,root
+	//get immediate child , single dir or file,from path
+	//use fs_specific of ct_entry,load clusters one by one, try to find the child
+	//or 
+	// open the immdiate child , read its contents...
+	//close
+	//check for dir_entry of the next child that we got from path
+	//if found , update
+	return 0x00;
+failure:
+	return 0x00;
+}
 int create_file_fat16(char* path)
 {
+	//
 	return 0;
 }
 int delete_file_fat16(char* path)
