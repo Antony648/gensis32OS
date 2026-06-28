@@ -60,7 +60,10 @@ struct vfs_node{
 
     uint16_t mode;
     uint16_t user_id;
-
+    uint32_t dirty_bit; //i used 32bit value for alignment, dirty bit is used in situvation such as write
+        //or delete where file attributes may have changed and it has to be updated in file entry in partition
+        //we should later write a process that scans all vfs nodes and will write back file data to partition
+        //where dirty bit is high and sets it low
     uint32_t access_time;
     uint32_t modified_time;
     union k
