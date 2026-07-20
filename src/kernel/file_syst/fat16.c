@@ -264,7 +264,7 @@ struct cache_table_entry* is_present_in_cache_table(int mode,uint64_t hash, char
 	return cache_tbl_entry_temp;
 }
 
-struct cache_table_entry* get_last_open(char* path)
+struct cache_table_entry* get_last_open(char* path,int* path_offset)
 {
 	//break the path using delimeter from reverse
 	//generate hash for whole path(exclude delimiter at end) , see if it is aldready open
@@ -281,7 +281,10 @@ struct cache_table_entry* get_last_open(char* path)
 			uint64_t hash=generate_hast_start_end(path, 0, i);
 			struct cache_table_entry* k=is_present_in_cache_table(1,hash,NULL);
 			if(k)
+			{
+				*path_offset=i;
 				return k;
+			}
 			
 		}
 		
@@ -659,10 +662,48 @@ uint8_t get_fs_specific_path_last_dir(char* path,uint16_t *fs_specific)
 failure:
 	return 0x00;
 }
-int create_file_fat16(char* path)
+int create_file_fat16(char* path,uint8_t type)
 {
-	//
-	return 0;
+	int rtn_val;
+	/*
+	set start=0;
+	use get_last_open with &start as second param , 
+	the full path will contian root or /root as start or any mount point
+	and it will be open so we will not get 0 as start in an expected situvation
+	cur_file= file retured from get_last_open
+	iteration:
+		f_name= immediate descendent file name from path start,cur_name_end holds end of name in path
+		for all clusters till match found:
+			read the clusters  cur_file, check for the f_name (load 32 byte dir entries )
+			if match found:
+				check if cur_name_end ==end of path:
+					it means files already exists;rtn_val=-FILE_ALREADY_EXISTS;goto exit;(return -FILE_ALREADY_EXISTS)
+				check if file is not dir:
+					it means we cannot have subdir yet path incomplete
+					rtn_val=-NON_EXISTENT_PATH;goto exit;(return -NON_EXISTENT_PATH)
+				if not first iteration:
+					close cur_file (the intermediate parent we opend), destroy file_ptr and cache_table_entry
+				open that file, create entry in cache_table entry and create file pointer 
+				set that to cur_file
+				update path "start" to include now opened file
+				goto iteration
+		if match not found: 
+			check if cur_name_end is the end of path(if the file we want is the last file):
+				create a file with f_name in the cur_file as per type give it one cluster
+				modify the parent*(cur_file) with one more dir_ent of the new f_name
+				rtn_val=0;goto exit;(return 0)
+			else:
+				create a file with f_name under cur_file as dir and give it one cluster 
+				modify the parent(cur_file) with one more dir_ent of the new f_name
+				close cur_file (the intermediate parent we opend), destroy file_ptr and cache_table_entry
+				open that file, create entry in cache_table entry and create file pointer 
+				set that to cur_file
+				update path "start" to include now opened file
+						
+	 */ 
+exit:
+//unallocate all resources
+	return rtn_val;
 }
 int delete_file_fat16(char* path)
 {

@@ -86,7 +86,7 @@ struct fops{
     //void* (*parse_partition_fill_bpb)(struct partition* part);
     int (*vfs_open)(char* path);
     int (*vfs_close)(char* path);
-    int (*vfs_create_file)(char* path);
+    int (*vfs_create_file)(char* path,uint8_t type);
     int (*vfs_delete_file)(char* path);
     int (*mount)(struct partition* part,char* path,struct vfs_node* parent);
     int (*umount)(char* path);

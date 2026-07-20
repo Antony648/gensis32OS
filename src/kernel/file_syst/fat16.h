@@ -25,9 +25,9 @@ int write_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 int read_fat16(struct file* file_ptr,char* buffer,uint32_t size);
 struct fat16_bpb* parse_partition_fill_bpb_fat16(struct partition* );
 int mount_fat16(struct partition* part,char* path,struct vfs_node* node);
-int create_file_fat16(char* path);
+int create_file_fat16(char* path,uint8_t type);
 int delete_file_fat16(char* path);
-struct cache_table_entry* get_last_open(char* path);
+struct cache_table_entry* get_last_open(char* path,int* path_open);
 int umount_fat16(char* path);
 
 struct file_system fat16_fs={
