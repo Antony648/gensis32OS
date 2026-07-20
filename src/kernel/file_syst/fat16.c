@@ -671,6 +671,8 @@ int create_file_fat16(char* path,uint8_t type)
 	the full path will contian root or /root as start or any mount point
 	and it will be open so we will not get 0 as start in an expected situvation
 	cur_file= file retured from get_last_open
+	check if cur_file is not a directory :
+		rtn_val=-NON_EXISTENT_PATH;goto exit;(return -NON_EXISTENT_PATH)
 	iteration:
 		f_name= immediate descendent file name from path start,cur_name_end holds end of name in path
 		for all clusters till match found:
@@ -703,9 +705,50 @@ int create_file_fat16(char* path,uint8_t type)
 	 */ 
 exit:
 //unallocate all resources
+//check if last temp file was deleted if not delete
+/*if	not first iteration:
+		delete cur_file file_ptr and cache table entry*/
 	return rtn_val;
 }
 int delete_file_fat16(char* path)
 {
-	return 0;
+	int rtn_val=0;
+	/*
+	set start=0;
+	use get_last_open with &start as second param , 
+	the full path will contian root or /root as start or any mount point
+	and it will be open so we will not get 0 as start in an expected situvation
+	cur_file= file retured from get_last_open
+	check if cur_file is not a directory :
+		rtn_val=-NON_EXISTENT_PATH;goto exit;(return -NON_EXISTENT_PATH)
+	iteration:
+		fname=immediate descendent file name from path start,cur_name_end holds end of name in path
+		for each cluster in said file:
+			if f_name found:
+				if cur_name_end  ==end of path:
+					if f_name is not dir || (is dir but empty):
+						free all clusters of f_name; remove dir_ent of f_name from cur_file(immediate parent)
+						rtn_val=0;goto exit; (return 0)
+					else:	
+						rtn_val=-DELETE_NON_EMPTY_DIR_ERROR;goto exit;
+				else:
+					if f_name is not dir :
+						rtn_val=-NON_EXISTENT_PATH;goto exit;
+					else:
+						if	not first iteration:
+							delete cur_file file_ptr and cache table entry
+						open f_name, file_ptr and cache table entry
+						set cur_file to f_name, update start to include f_name 
+						continue;(goto iteration)
+			else:
+				rtn_val=-FILE_NOT_FOUND; goto exit;(return -FILE_NOT_FOUND)
+					
+
+	*/	
+exit:
+	//unallocate all resources
+	//check if last temp file was deleted if not delete
+	/*if	not first iteration:
+		delete cur_file file_ptr and cache table entry*/
+	return rtn_val;
 }
