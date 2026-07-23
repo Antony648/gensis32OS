@@ -15,6 +15,7 @@ extern uint32_t VFS_INODE_ID_COUNT;
 extern uint32_t CACHE_TABLE_COUNT;
 extern struct cache_table_entry* cache_table_start;
 extern struct cache_table_entry* cache_table_last;
+#define F_NAME_LEN 10
 static inline  uint16_t get_2_bytes(uint8_t* ptr)
 {
 	//we require this because of endianess
@@ -662,9 +663,84 @@ uint8_t get_fs_specific_path_last_dir(char* path,uint16_t *fs_specific)
 failure:
 	return 0x00;
 }
+int set_fname(char* path,char *f_name,int start ,size_t size)
+{
+	for(uint32_t i=0;i<size;i++)
+		f_name[i]=0;
+	int i;
+	for ( i=start;path[i]!='/';i++);
+	for (int j=start;j<i;j++)
+		f_name[j] =path[j];
+	return  i;
+
+}
+uint32_t get_cluster_size(struct vfs_node* node)
+{
+	//return size of cluster in bytes
+	struct fat16_bpb * bpb=(struct fat16_bpb *)node->origin_mount_point->fs_bpb;
+	return (bpb->bytes_per_sect*bpb->sect_per_clust);
+}
+bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fill_val)
+{
+	bool ret_val=0x0;
+	struct vfs_node* node;
+	uint32_t cluster_size=0;
+	char* buffer=NULL;
+	char* target_name=NULL;
+	switch(ct->content_type)
+	{
+		case CTE_FILE:
+			return NULL;
+		case CTE_MOUNT_PNT:
+		case CTE_ROOT:
+			node =((struct mount_table_entry*)(ct->content.mnt_tbl_entry_ptr))->fs_root_node;
+			break;
+		case CTE_DIR:
+			node=ct->content.vfs_node_ptr;
+			break;
+		default:
+			return NULL;
+	}
+	//create a file pointer for read
+	struct file file_ptr;
+	file_ptr.vfs_node_ptr=node;
+	file_ptr.offset=0;
+	file_ptr.flags=0x1;	//read
+	cluster_size=get_cluster_size(node);	//cluster size in bytes
+
+	buffer=heap_cream_malloc(cluster_size);
+	if(!buffer)
+		return NULL;
+	for(int j=0;j<((int)(node->size/cluster_size));j++)
+	{
+		//loop till 
+		if(!read_fat16(&file_ptr, buffer, cluster_size))
+			break;
+		//loop terminates if read_fat16 returns 0 , or 0 bytes read 
+	
+		for(int i=0;i<(cluster_size/28);i++)
+		{
+			//check for a file with f_name in buffer
+			if(!strncmp(target_name, f_name, FILE_NAME_LEN_MAX))
+			{
+				memcpy(fill_val, target_name, FAT16_DIRENT_SIZE);
+				ret_val=true;goto exit;
+			}
+			target_name+=28;
+		}
+	}
+
+exit:
+	if(buffer)
+		heap_cream_free(buffer);
+	return ret_val;
+}
 int create_file_fat16(char* path,uint8_t type)
 {
-	int rtn_val;
+	int rtn_val,start=0,cur_name_end;
+	int path_last=strlen(path)-1;
+	char f_name[F_NAME_LEN];
+	char dir_ent[FAT16_DIRENT_SIZE];
 	/*
 	set start=0;
 	use get_last_open with &start as second param , 
@@ -673,6 +749,14 @@ int create_file_fat16(char* path,uint8_t type)
 	cur_file= file retured from get_last_open
 	check if cur_file is not a directory :
 		rtn_val=-NON_EXISTENT_PATH;goto exit;(return -NON_EXISTENT_PATH)
+		 */
+	struct cache_table_entry* cur_file=get_last_open(path, &start);
+	if(cur_file->content_type==CTE_FILE)
+	{
+		//okay to be dir, root, mount point as all of this are directories
+		rtn_val=-NON_EXISTENT_PATH;goto exit;
+	}
+		 /*
 	iteration:
 		f_name= immediate descendent file name from path start,cur_name_end holds end of name in path
 		for all clusters till match found:
@@ -703,6 +787,44 @@ int create_file_fat16(char* path,uint8_t type)
 				update path "start" to include now opened file
 						
 	 */ 
+	 bool is_first=true;
+	 while(1)
+	 {
+		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
+		cur_name_end++;
+		if(read_cluster_find_match(cur_file,f_name,dir_ent))
+		{
+			if(cur_name_end==path_last)
+			{
+				rtn_val=-PATH_ALREADY_EXISTS;goto exit;
+			}
+			else if(!((dir_ent[11])&0x10))	 //if the bit 4 is not  set then not dir
+			{
+				rtn_val=-NON_EXISTENT_PATH;goto exit;
+			}
+			else {
+				if(is_first)
+					is_first=false;
+				else
+				{
+					//close the temp open file
+					
+				}
+				//open that file
+				
+			}
+		}
+		else 
+		{
+			if(cur_name_end == path_last)
+			{
+				//create file
+			}
+			else {
+			
+			}
+		}
+	 }
 exit:
 //unallocate all resources
 //check if last temp file was deleted if not delete
