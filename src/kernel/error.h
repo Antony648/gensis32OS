@@ -14,4 +14,6 @@
 #define 	FILE_NOT_MOUNTPOINT 38
 #define 	RESOURCE_BUSY	39
 #define 	EOF 			40
+#define     NON_EXISTENT_PATH   42
+#define     PATH_ALREADY_EXISTS 43
 #endif
