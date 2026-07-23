@@ -668,10 +668,10 @@ int set_fname(char* path,char *f_name,int start ,size_t size)
 	for(uint32_t i=0;i<size;i++)
 		f_name[i]=0;
 	int i;
-	for ( i=start;path[i]!='/';i++);
+	for ( i=start;path[i]!='/' && path[i];i++);
 	for (int j=start;j<i;j++)
 		f_name[j] =path[j];
-	return  i;
+	return  i-1;	//index of last element
 
 }
 uint32_t get_cluster_size(struct vfs_node* node)
@@ -693,7 +693,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 			return NULL;
 		case CTE_MOUNT_PNT:
 		case CTE_ROOT:
-			node =((struct mount_table_entry*)(ct->content.mnt_tbl_entry_ptr))->fs_root_node;
+			node =ct->content.mnt_tbl_entry_ptr->fs_root_node;
 			break;
 		case CTE_DIR:
 			node=ct->content.vfs_node_ptr;
@@ -718,7 +718,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 			break;
 		//loop terminates if read_fat16 returns 0 , or 0 bytes read 
 	
-		for(int i=0;i<(cluster_size/28);i++)
+		for(int i=0;i<(cluster_size/FAT16_DIRENT_SIZE);i++)
 		{
 			//check for a file with f_name in buffer
 			if(!strncmp(target_name, f_name, FILE_NAME_LEN_MAX))
@@ -726,7 +726,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 				memcpy(fill_val, target_name, FAT16_DIRENT_SIZE);
 				ret_val=true;goto exit;
 			}
-			target_name+=28;
+			target_name+=FAT16_DIRENT_SIZE;
 		}
 	}
 
@@ -735,10 +735,81 @@ exit:
 		heap_cream_free(buffer);
 	return ret_val;
 }
+struct mount_table_entry* get_origing_mnt_tbl_ent(struct cache_table_entry* ct)
+{
+	struct vfs_node* node=0;
+	switch(ct->content_type)
+	{
+		case CTE_FILE:
+			return NULL;
+		case CTE_MOUNT_PNT:
+		case CTE_ROOT:
+			node =ct->content.mnt_tbl_entry_ptr->fs_root_node;
+			break;
+		case CTE_DIR:
+			node=ct->content.vfs_node_ptr;
+			break;
+		default:
+			return NULL;
+	}
+	return node->origin_mount_point;
+	
+}
+struct cache_table_entry* fat16_sub_open_file(char* dir_ent,char*path,int offset,struct mount_table_entry* origin)
+{
+	//create a cache_table_entry
+	struct cache_table_entry* ct=heap_cream_malloc(sizeof(struct cache_table_entry));
+	if(!ct)
+		return NULL;
+	ct->path_hash=generate_hast_start_end(path, 0, offset);
+	if((dir_ent[11])&0x10)
+		ct->content_type=CTE_DIR;
+	else
+	 	ct->content_type=CTE_FILE;
+
+	//allocate a vfs_node
+	struct vfs_node *node=heap_cream_malloc(sizeof(struct vfs_node));
+	if(!node)
+		goto fail;
+
+	ct->content.vfs_node_ptr=node;
+	ct->refcount=1;
+	ct->flags=file_read;
+	if(!(dir_ent[11]&0x01))
+		ct->flags|=file_write;
+	ct->next=NULL;
+	cache_table_last->next=ct;
+	ct->prev=cache_table_last;
+	cache_table_last=ct;
+
+	//modify and link vfs to ct
+	node->fs_specific= *((uint16_t*)&dir_ent[26]);
+	node->size=*((uint32_t*)&dir_ent[28]);
+	node->content.ct=ct;
+	node->origin_mount_point=origin;
+	node->node_id=generate_vfs_node_id();
+	node->mode=ct->flags;
+	//set node access time and creation time
+	return ct;
+fail:
+	if(ct)
+		heap_cream_free(ct);
+	if(node)
+		heap_cream_free(node);
+	return NULL;
+}
+int fat16_sub_close_file(struct cache_table_entry* ct)
+{
+	//cannot close mount point
+	//check refcount
+	return 0;
+}
 int create_file_fat16(char* path,uint8_t type)
 {
 	int rtn_val,start=0,cur_name_end;
-	int path_last=strlen(path)-1;
+	int path_last=strlen(path);
+	if(path[path_last-1]=='/')
+		path_last--;
 	char f_name[F_NAME_LEN];
 	char dir_ent[FAT16_DIRENT_SIZE];
 	/*
@@ -791,10 +862,10 @@ int create_file_fat16(char* path,uint8_t type)
 	 while(1)
 	 {
 		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
-		cur_name_end++;
+		//cur_name_end++;
 		if(read_cluster_find_match(cur_file,f_name,dir_ent))
 		{
-			if(cur_name_end==path_last)
+			if(cur_name_end ==path_last)
 			{
 				rtn_val=-PATH_ALREADY_EXISTS;goto exit;
 			}
@@ -803,14 +874,16 @@ int create_file_fat16(char* path,uint8_t type)
 				rtn_val=-NON_EXISTENT_PATH;goto exit;
 			}
 			else {
+				struct mount_table_entry* origin=get_origing_mnt_tbl_ent(cur_file);
 				if(is_first)
 					is_first=false;
 				else
 				{
 					//close the temp open file
-					
+					fat16_sub_close_file(cur_file);
 				}
 				//open that file
+				cur_file=fat16_sub_open_file(dir_ent,path,cur_name_end-1,origin);
 				
 			}
 		}
@@ -819,6 +892,7 @@ int create_file_fat16(char* path,uint8_t type)
 			if(cur_name_end == path_last)
 			{
 				//create file
+				//check permission of parent to write 
 			}
 			else {
 			
