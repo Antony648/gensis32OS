@@ -18,6 +18,7 @@ struct fat16_bpb
 	uint32_t root_lba;
 	uint32_t data_lba;
 };
+#define FAT16_DIRENT_SIZE 28
 
 uint32_t get_root_specific_fat16(struct vfs_node* node, struct partition* part);
 int get_file_specific_fat16(struct vfs_node* parent,struct vfs_node* child,char* name);
@@ -29,6 +30,8 @@ int create_file_fat16(char* path,uint8_t type);
 int delete_file_fat16(char* path);
 struct cache_table_entry* get_last_open(char* path,int* path_open);
 int umount_fat16(char* path);
+struct file* open_file(char*path);
+int close_file(struct file*);
 
 struct file_system fat16_fs={
 	.name="FAT16   ",
