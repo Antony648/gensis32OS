@@ -72,7 +72,7 @@ struct vfs_node{
         struct mount_table_entry* mte;
     }content;
     struct mount_table_entry *origin_mount_point; //for normal file pointing 
-    uint32_t fs_specific;      //generally an address or byte offset to a root sect dir ent in fat16
+    uint32_t fs_specific;      //fat16 data section cluster number;
     
    
 
