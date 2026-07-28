@@ -802,6 +802,8 @@ int fat16_sub_close_file(struct cache_table_entry* ct)
 {
 	//cannot close mount point
 	//check refcount
+	if(!ct)
+		return -NULL_ARG;
 	if(ct->refcount>1)
 		return -MORE_THAN_ONE_REFCOUNT;
 	if(ct->content_type == CTE_MOUNT_PNT)
@@ -814,7 +816,8 @@ int fat16_sub_close_file(struct cache_table_entry* ct)
 	//destroy ct
 	heap_cream_free(ct);
 	//destroy node
-	heap_cream_free(node);
+	if(node)
+		heap_cream_free(node);
 	return 0;
 }
 int create_file_fat16(char* path,uint8_t type)
