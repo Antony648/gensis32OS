@@ -18,4 +18,5 @@
 #define     PATH_ALREADY_EXISTS 43
 #define     MORE_THAN_ONE_REFCOUNT 44
 #define     TRYING_TO_CLOSE_MOUNT_PNT 45
+#define     NULL_ARG    46
 #endif
