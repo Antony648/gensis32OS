@@ -680,7 +680,7 @@ uint32_t get_cluster_size(struct vfs_node* node)
 	struct fat16_bpb * bpb=(struct fat16_bpb *)node->origin_mount_point->fs_bpb;
 	return (bpb->bytes_per_sect*bpb->sect_per_clust);
 }
-bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fill_val)
+bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char** fill_val)
 {
 	bool ret_val=0x0;
 	struct vfs_node* node;
@@ -723,7 +723,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 			//check for a file with f_name in buffer
 			if(!strncmp(target_name, f_name, FILE_NAME_LEN_MAX))
 			{
-				memcpy(fill_val, target_name, FAT16_DIRENT_SIZE);
+				memcpy(*fill_val, target_name, FAT16_DIRENT_SIZE);
 				ret_val=true;goto exit;
 			}
 			target_name+=FAT16_DIRENT_SIZE;
@@ -855,7 +855,7 @@ int create_file_fat16(char* path,uint8_t type)
 					it means we cannot have subdir yet path incomplete
 					rtn_val=-NON_EXISTENT_PATH;goto exit;(return -NON_EXISTENT_PATH)
 				if not first iteration:
-					close cur_file (the intermediate parent we opend), destroy file_ptr and cache_table_entry
+						ntermediate parent we opend), destroy file_ptr and cache_table_entry
 				open that file, create entry in cache_table entry and create file pointer 
 				set that to cur_file
 				update path "start" to include now opened file
@@ -879,7 +879,7 @@ int create_file_fat16(char* path,uint8_t type)
 	 {
 		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
 		//cur_name_end++;
-		if(read_cluster_find_match(cur_file,f_name,dir_ent))
+		if(read_cluster_find_match(cur_file,f_name,&dir_ent))
 		{
 			if(cur_name_end ==path_last)
 			{
@@ -900,11 +900,18 @@ int create_file_fat16(char* path,uint8_t type)
 				}
 				//open that file
 				cur_file=fat16_sub_open_file(dir_ent,path,cur_name_end-1,origin);
-				
+
+				//update start to cur_name_end; if it does not cause trouble
+				if(path[cur_name_end] && path[cur_name_end+1])	//concept of cur_name being end alredy checked
+					start=cur_name_end;
 			}
 		}
 		else 
 		{
+			//check the write permission of the cur_file
+			//create one dir ent in the current file, fill the required details
+			//get one empty cluster from fat table set the status in FAT, if fail undo previoius exit
+
 			if(cur_name_end == path_last)
 			{
 				//create file
