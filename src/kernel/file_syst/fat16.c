@@ -681,9 +681,9 @@ uint32_t get_cluster_size(struct vfs_node* node)
 	struct fat16_bpb * bpb=(struct fat16_bpb *)node->origin_mount_point->fs_bpb;
 	return (bpb->bytes_per_sect*bpb->sect_per_clust);
 }
-bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fill_val)
+char* read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fill_val)
 {
-	bool ret_val=0x0;
+	char* ret_val=0x0;
 	struct vfs_node* node;
 	uint32_t cluster_size=0;
 	char* buffer=NULL;
@@ -691,7 +691,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 	switch(ct->content_type)
 	{
 		case CTE_FILE:
-			return NULL;
+			return 0x0;
 		case CTE_MOUNT_PNT:
 		case CTE_ROOT:
 			node =ct->content.mnt_tbl_entry_ptr->fs_root_node;
@@ -700,7 +700,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 			node=ct->content.vfs_node_ptr;
 			break;
 		default:
-			return NULL;
+			return 0x0;
 	}
 	//create a file pointer for read
 	struct file file_ptr;
@@ -711,7 +711,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 
 	buffer=heap_cream_malloc(cluster_size);
 	if(!buffer)
-		return NULL;
+		return 0x0;
 	for(int j=0;j<((int)(node->size/cluster_size));j++)
 	{
 		//loop till 
@@ -725,7 +725,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fil
 			if(!strncmp(target_name, f_name, FILE_NAME_LEN_MAX))
 			{
 				memcpy(fill_val, target_name, FAT16_DIRENT_SIZE);
-				ret_val=true;goto exit;
+				ret_val=target_name;goto exit;
 			}
 			target_name+=FAT16_DIRENT_SIZE;
 		}
@@ -830,6 +830,8 @@ int create_file_fat16(char* path,uint8_t type)
 		path_last--;
 	char f_name[F_NAME_LEN];
 	char dir_ent[FAT16_DIRENT_SIZE];
+	char* dir_ent_location;
+	char* dir_ent_prev;
  	bool is_first=true;
  	
 	/*
@@ -883,7 +885,9 @@ int create_file_fat16(char* path,uint8_t type)
 	 {
 		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
 		//cur_name_end++;
-		if(read_cluster_find_match(cur_file,f_name,dir_ent))
+		dir_ent_prev=dir_ent_location;
+		dir_ent_location=read_cluster_find_match(cur_file,f_name,dir_ent);
+		if(dir_ent_location)
 		{
 			if(cur_name_end ==path_last)
 			{
@@ -929,11 +933,34 @@ int create_file_fat16(char* path,uint8_t type)
 				dir_ent[20]=0;dir_ent[21]=0;
 				//origin=get_origing_mnt_tbl_ent(cur_file)->mnt_part->f_disk;
 				disk=origin->mnt_part->f_disk;
+				bpb=(struct fat16_bpb*)origin->fs_bpb;
+				uint32_t start_sect=origin->mnt_part->start_sect;
+				temp=get_free_cluster(disk, bpb, start_sect, 0xfff8);
+				if(temp>= 0xfff8 && temp< 0x2)
+				{
+					rtn_val=-FAILED_TO_GET_FREE_CLUSTER;
+					goto exit;
+				}
+				*((uint16_t*)(&dir_ent[26]))=temp;
+				*((uint16_t*)(&dir_ent[28]))=0;
 				//get one empty cluster from fat table set the status in FAT, if fail undo previoius exit
+				struct file temp_file;temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
+				temp_file.flags=file_write;
+				if(cur_file->content_type==CTE_MOUNT_PNT)
+					temp_file.vfs_node_ptr=cur_file->content.mnt_tbl_entry_ptr->fs_root_node;
+				else
+					temp_file.vfs_node_ptr=cur_file->content.vfs_node_ptr;
+				if(write_fat16(&temp_file, dir_ent, FAT16_DIRENT_SIZE)<0)
+				{
+					//some error ,undo the Fat table write; 
+					//YET TO IMPLEMENT
+					rtn_val=-FAILED_TO_WRITE_TO_PARENT;goto exit;
+				}
 				//assign the empty cluster found to field in dir
 				if(cur_name_end == path_last)
 				{
 					//file created ,set return value;
+					rtn_val=0;goto exit;
 				}
 				else {
 					//fat16_sub_open_file(dir_ent,path,cur_name_end-1;origin);
