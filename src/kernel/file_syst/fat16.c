@@ -2,6 +2,7 @@
 #include "../disk/disk.h"
 #include "../heap/heap_cream.h"
 #include "vfs.h"
+#include "../clock/clock.h"
 #include <stddef.h>
 #include <stdint.h>
 #include "../string/string.h"
@@ -15,7 +16,7 @@ extern uint32_t VFS_INODE_ID_COUNT;
 extern uint32_t CACHE_TABLE_COUNT;
 extern struct cache_table_entry* cache_table_start;
 extern struct cache_table_entry* cache_table_last;
-#define F_NAME_LEN 10
+#define F_NAME_LEN 13	//8 name+1 dot +3 extention+ null
 static inline  uint16_t get_2_bytes(uint8_t* ptr)
 {
 	//we require this because of endianess
@@ -786,6 +787,7 @@ struct cache_table_entry* fat16_sub_open_file(char* dir_ent,char*path,int offset
 	node->fs_specific= *((uint16_t*)&dir_ent[26]);
 	node->size=*((uint32_t*)&dir_ent[28]);
 	node->content.ct=ct;
+	//perform origin scan to find actual origin instead of passed origin;may be mount point
 	node->origin_mount_point=origin;
 	node->node_id=generate_vfs_node_id();
 	node->mode=ct->flags;
@@ -828,6 +830,8 @@ int create_file_fat16(char* path,uint8_t type)
 		path_last--;
 	char f_name[F_NAME_LEN];
 	char dir_ent[FAT16_DIRENT_SIZE];
+ 	bool is_first=true;
+ 	
 	/*
 	set start=0;
 	use get_last_open with &start as second param , 
@@ -874,7 +878,7 @@ int create_file_fat16(char* path,uint8_t type)
 				update path "start" to include now opened file
 						
 	 */ 
-	 bool is_first=true;
+	
 	 while(1)
 	 {
 		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
@@ -903,23 +907,42 @@ int create_file_fat16(char* path,uint8_t type)
 
 				//update start to cur_name_end; if it does not cause trouble
 				if(path[cur_name_end] && path[cur_name_end+1])	//concept of cur_name being end alredy checked
-					start=cur_name_end;
+					start=cur_name_end+1;
 			}
 		}
 		else 
 		{
-			//check the write permission of the cur_file
-			//create one dir ent in the current file, fill the required details
-			//get one empty cluster from fat table set the status in FAT, if fail undo previoius exit
-
-			if(cur_name_end == path_last)
-			{
-				//create file
-				//check permission of parent to write 
-			}
-			else {
-			
-			}
+			//once created all subfolders and files should be created ;no need ot scan or find
+			struct disk* disk;struct fat16_bpb *bpb;struct mount_table_entry *origin;
+			do{
+				//check the write permission of the cur_file
+				//create one dir ent in the current file, fill the required details
+				strncpy(dir_ent,f_name,FILE_NAME_LEN_MAX);
+				strncpy(&(dir_ent[FILE_NAME_LEN_MAX]),&(f_name[FILE_NAME_LEN_MAX+1]),(F_NAME_LEN-FILE_NAME_LEN_MAX)); 
+				uint16_t temp=get_date_fat16();
+				*((uint16_t*)(&dir_ent[24]))=temp;
+				*((uint16_t*)(&dir_ent[18]))=temp;
+				*((uint16_t*)(&dir_ent[16]))=temp;
+				temp=get_time_fat16();
+				*((uint16_t*)(&dir_ent[14]))=temp;
+				*((uint16_t*)(&dir_ent[22]))=temp;
+				dir_ent[20]=0;dir_ent[21]=0;
+				//origin=get_origing_mnt_tbl_ent(cur_file)->mnt_part->f_disk;
+				disk=origin->mnt_part->f_disk;
+				//get one empty cluster from fat table set the status in FAT, if fail undo previoius exit
+				//assign the empty cluster found to field in dir
+				if(cur_name_end == path_last)
+				{
+					//file created ,set return value;
+				}
+				else {
+					//fat16_sub_open_file(dir_ent,path,cur_name_end-1;origin);
+					if(path[cur_name_end] && path[cur_name_end+1])
+						start=cur_name_end+1;
+				}
+				cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
+			}while(cur_name_end<= path_last);
+			goto exit;
 		}
 	 }
 exit:
