@@ -918,6 +918,7 @@ int create_file_fat16(char* path,uint8_t type)
 		{
 			//once created all subfolders and files should be created ;no need ot scan or find
 			struct disk* disk;struct fat16_bpb *bpb;struct mount_table_entry *origin;
+			struct file temp_file;temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
 			do{
 				//check the write permission of the cur_file
 				//create one dir ent in the current file, fill the required details
@@ -944,7 +945,10 @@ int create_file_fat16(char* path,uint8_t type)
 				*((uint16_t*)(&dir_ent[26]))=temp;
 				*((uint16_t*)(&dir_ent[28]))=0;
 				//get one empty cluster from fat table set the status in FAT, if fail undo previoius exit
-				struct file temp_file;temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
+				//struct file temp_file;temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
+				//the above line is put to top so that it only executes during initial run
+				//because once inside this creation loop we donot the size of parent size to append as 
+				//we know the size is zero because inside loop parent is freshly created
 				temp_file.flags=file_write;
 				if(cur_file->content_type==CTE_MOUNT_PNT)
 					temp_file.vfs_node_ptr=cur_file->content.mnt_tbl_entry_ptr->fs_root_node;
@@ -963,11 +967,12 @@ int create_file_fat16(char* path,uint8_t type)
 					rtn_val=0;goto exit;
 				}
 				else {
-					//fat16_sub_open_file(dir_ent,path,cur_name_end-1;origin);
+					cur_file=fat16_sub_open_file(dir_ent,path,cur_name_end-1,origin);
 					if(path[cur_name_end] && path[cur_name_end+1])
 						start=cur_name_end+1;
 				}
 				cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
+				temp_file.offset=0;
 			}while(cur_name_end<= path_last);
 			goto exit;
 		}
