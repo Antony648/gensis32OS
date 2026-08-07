@@ -18,5 +18,7 @@
 #define     PATH_ALREADY_EXISTS 43
 #define     MORE_THAN_ONE_REFCOUNT 44
 #define     TRYING_TO_CLOSE_MOUNT_PNT 45
+#define 	FAILED_TO_GET_FREE_CLUSTER 46
+#define 	FAILED_TO_WRITE_TO_PARENT 	47
 #define     NULL_ARG    46
 #endif
