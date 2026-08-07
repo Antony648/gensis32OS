@@ -680,7 +680,7 @@ uint32_t get_cluster_size(struct vfs_node* node)
 	struct fat16_bpb * bpb=(struct fat16_bpb *)node->origin_mount_point->fs_bpb;
 	return (bpb->bytes_per_sect*bpb->sect_per_clust);
 }
-bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char** fill_val)
+bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fill_val)
 {
 	bool ret_val=0x0;
 	struct vfs_node* node;
@@ -723,7 +723,7 @@ bool read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char** fi
 			//check for a file with f_name in buffer
 			if(!strncmp(target_name, f_name, FILE_NAME_LEN_MAX))
 			{
-				memcpy(*fill_val, target_name, FAT16_DIRENT_SIZE);
+				memcpy(fill_val, target_name, FAT16_DIRENT_SIZE);
 				ret_val=true;goto exit;
 			}
 			target_name+=FAT16_DIRENT_SIZE;
@@ -879,7 +879,7 @@ int create_file_fat16(char* path,uint8_t type)
 	 {
 		cur_name_end=set_fname(path, f_name, start, F_NAME_LEN);
 		//cur_name_end++;
-		if(read_cluster_find_match(cur_file,f_name,&dir_ent))
+		if(read_cluster_find_match(cur_file,f_name,dir_ent))
 		{
 			if(cur_name_end ==path_last)
 			{
