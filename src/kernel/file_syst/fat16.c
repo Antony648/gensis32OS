@@ -964,6 +964,7 @@ int create_file_fat16(char* path,uint8_t type)
 				if(cur_name_end == path_last)
 				{
 					//file created ,set return value;
+					//iteratively close file that has been opened yet to implement!
 					rtn_val=0;goto exit;
 				}
 				else {
@@ -982,6 +983,11 @@ exit:
 //check if last temp file was deleted if not delete
 /*if	not first iteration:
 		delete cur_file file_ptr and cache table entry*/
+	if(!is_first)
+	{
+		if(cur_file)
+		fat16_sub_close_file(cur_file);
+	}
 	return rtn_val;
 }
 int delete_file_fat16(char* path)
