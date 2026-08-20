@@ -668,10 +668,11 @@ int set_fname(char* path,char *f_name,int start ,size_t size)
 {
 	for(uint32_t i=0;i<size;i++)
 		f_name[i]=0;
-	int i;
+	int i,j;
 	for ( i=start;path[i]!='/' && path[i];i++);
-	for (int j=start;j<i;j++)
-		f_name[j] =path[j];
+	for (j=start;j<i;j++,i++)
+		f_name[j] =path[i];
+	f_name[j]=0;
 	return  i-1;	//index of last element
 
 }
@@ -718,7 +719,7 @@ char* read_cluster_find_match(struct cache_table_entry* ct,char* f_name,char* fi
 		if(!read_fat16(&file_ptr, buffer, cluster_size))
 			break;
 		//loop terminates if read_fat16 returns 0 , or 0 bytes read 
-	
+		target_name=buffer;	//set target_name to buffer so that it points to start
 		for(int i=0;i<(cluster_size/FAT16_DIRENT_SIZE);i++)
 		{
 			//check for a file with f_name in buffer
@@ -830,8 +831,8 @@ int create_file_fat16(char* path,uint8_t type)
 		path_last--;
 	char f_name[F_NAME_LEN];
 	char dir_ent[FAT16_DIRENT_SIZE];
-	char* dir_ent_location;
-	char* dir_ent_prev;
+	char* dir_ent_location=NULL;
+	char* dir_ent_prev=NULL;
  	bool is_first=true;
  	
 	/*
@@ -918,7 +919,9 @@ int create_file_fat16(char* path,uint8_t type)
 		{
 			//once created all subfolders and files should be created ;no need ot scan or find
 			struct disk* disk;struct fat16_bpb *bpb;struct mount_table_entry *origin;
-			struct file temp_file;temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
+			struct file temp_file;
+			if(dir_ent_prev)
+				temp_file.offset=*((uint16_t*)(&dir_ent_prev[28]));//puts offset to end
 			do{
 				//check the write permission of the cur_file
 				//create one dir ent in the current file, fill the required details
@@ -932,12 +935,17 @@ int create_file_fat16(char* path,uint8_t type)
 				*((uint16_t*)(&dir_ent[14]))=temp;
 				*((uint16_t*)(&dir_ent[22]))=temp;
 				dir_ent[20]=0;dir_ent[21]=0;
-				//origin=get_origing_mnt_tbl_ent(cur_file)->mnt_part->f_disk;
+				origin=get_origing_mnt_tbl_ent(cur_file);
+				if(!origin)
+				{
+					rtn_val= -COULD_NOT_FIND_CACHE_TABLE_ENTRY;
+					goto exit;
+				}
 				disk=origin->mnt_part->f_disk;
 				bpb=(struct fat16_bpb*)origin->fs_bpb;
 				uint32_t start_sect=origin->mnt_part->start_sect;
 				temp=get_free_cluster(disk, bpb, start_sect, 0xfff8);
-				if(temp>= 0xfff8 && temp< 0x2)
+				if(temp>= 0xfff8 || temp< 0x2)
 				{
 					rtn_val=-FAILED_TO_GET_FREE_CLUSTER;
 					goto exit;
@@ -965,9 +973,12 @@ int create_file_fat16(char* path,uint8_t type)
 				{
 					//file created ,set return value;
 					//iteratively close file that has been opened yet to implement!
+					fat16_sub_close_file(cur_file);
 					rtn_val=0;goto exit;
 				}
 				else {
+					//close the parent cur_file and go to newly created child
+					fat16_sub_close_file(cur_file);
 					cur_file=fat16_sub_open_file(dir_ent,path,cur_name_end-1,origin);
 					if(path[cur_name_end] && path[cur_name_end+1])
 						start=cur_name_end+1;
